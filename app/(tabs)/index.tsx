@@ -1,98 +1,142 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import PillButton from "@/components/buttons/PillButton";
+import Card from "@/components/layout/Card";
+import ListBlock from "@/components/layout/ListBlock";
+import Screen from "@/components/layout/Screen";
+import Section from "@/components/layout/Section";
+import ProfileHeader from "@/src/components/profile/ProfileHeader";
+import { colors } from "@/styles/shared-styles";
+import { router } from "expo-router";
+import { StyleSheet, Text, View } from "react-native";
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
-
-export default function HomeScreen() {
+export default function Dashboard() {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <Screen>
+      <Section>
+        <View style={styles.headerContainer}>
+          <ProfileHeader />
+          <PillButton
+            label="Add Profile"
+            iconName="person-add-outline"
+            iconColor={colors.brand.primary}
+            showIconChip={true}
+            rightIconColor={colors.brand.primary}
+            textStyle={{ color: "#4A90E2", fontSize: 15 }}
+            iconSize={20}
+            style={{
+              paddingVertical: 10,
+              paddingHorizontal: 5,
+              width: 145,
+              alignSelf: "center",
+            }}
+            onPress={() => {}}
+          />
+        </View>
+        <Card elevationActive={true} borderActive={true} padding="lg">
+          <Text>
+            <Text style={{ fontWeight: "700" }}>Welcome back!</Text> Here’s a
+            look at today’s schedule:
+          </Text>
+        </Card>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+        <Card elevationActive={true} borderActive={true} padding={"md"}>
+          <Text style={{ fontWeight: "500" }}>Todays Overview:</Text>
+          <Card elevationActive={false} borderActive={false} padding={"none"}>
+            <View>
+              <ListBlock
+                iconName="medical-outline"
+                iconBgColor="rgba(74, 144, 226, 0.18)"
+                title="Meds Due"
+                subtitle="Next: 10:00 AM"
+                rightText="3 Medications"
+                rightTextStyles={{
+                  fontWeight: "500",
+                }}
+                rightTextContainer={{
+                  borderRadius: 45,
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  backgroundColor: colors.bg.danger,
+                }}
+                showChevron={false}
+                onPress={() => {
+                  return null;
+                }}
+              />
+
+              <ListBlock
+                iconName="calendar-outline"
+                iconBgColor="rgba(126, 200, 160, 0.22)"
+                title="Appointments"
+                subtitle="Speech Therapy"
+                rightText="1:00 PM"
+                onPress={() => router.push("/appointments")}
+              />
+
+              <ListBlock
+                iconName="checkbox-outline"
+                iconBgColor="rgba(245, 193, 108, 0.25)"
+                title="Tasks"
+                subtitle="2 Tasks"
+                onPress={() => router.push("/(pages)/tasks")}
+              />
+
+              <ListBlock
+                iconName="alert-circle-outline"
+                iconBgColor="rgba(233, 107, 107, 0.22)"
+                iconColor={colors.semantic.danger}
+                title="Alerts"
+                subtitle="Insulin dose deviation"
+                rightText="View all"
+                rightTextStyles={{
+                  paddingVertical: 8,
+                  paddingHorizontal: 10,
+                  fontWeight: "500",
+                }}
+                rightTextContainer={{
+                  borderRadius: 45,
+                  backgroundColor: colors.bg.info,
+                }}
+                onPress={() => {}}
+                showDivider={false}
+              />
+            </View>
+          </Card>
+        </Card>
+
+        <Card
+          padding="md"
+          borderActive={true}
+          elevationActive={true}
+          style={{ alignItems: "center", gap: 5 }}
+        >
+          <PillButton
+            label="EMERGENCY"
+            rightIconColor="white"
+            borderActive={false}
+            elevationActive={false}
+            showIconChip={false}
+            iconName="medkit"
+            iconColor="white"
+            iconSize={25}
+            rightIconName="chevron-forward"
+            textStyle={{
+              color: "white",
+              fontWeight: "500",
+              textAlign: "center",
+            }}
+            style={{ backgroundColor: "red", width: "60%" }}
+          />
+          <Text>Tap for critical info and lock phone</Text>
+        </Card>
+      </Section>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  headerContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
 });
