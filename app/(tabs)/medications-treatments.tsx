@@ -2,7 +2,6 @@ import Section from "@/components/layout/Section";
 import Card from "@/src/components/layout/Card";
 import ListBlock from "@/src/components/layout/ListBlock";
 import Screen from "@/src/components/layout/Screen";
-import ProfileHeader from "@/src/components/profile/ProfileHeader";
 import { Ionicons } from "@expo/vector-icons";
 import { Text, View } from "react-native";
 
@@ -10,8 +9,6 @@ export default function MedicationsTreatments() {
   return (
     <Screen>
       <Section>
-        <ProfileHeader />
-
         <Card padding="cardInset" borderActive={true} elevationActive={true}>
           <Text>Stay on top of medications and monitor treatments.</Text>
         </Card>

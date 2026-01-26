@@ -6,13 +6,13 @@ import Section from "@/components/layout/Section";
 import ProfileHeader from "@/src/components/profile/ProfileHeader";
 import { colors } from "@/styles/shared-styles";
 import { router } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 export default function Dashboard() {
   return (
     <Screen>
       <Section>
-        <View style={styles.headerContainer}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <ProfileHeader />
           <PillButton
             label="Add Profile"
@@ -20,12 +20,12 @@ export default function Dashboard() {
             iconColor={colors.brand.primary}
             showIconChip={true}
             rightIconColor={colors.brand.primary}
-            textStyle={{ color: "#4A90E2", fontSize: 15 }}
             iconSize={20}
+            textStyle={{ color: "#4A90E2" }}
             style={{
               paddingVertical: 10,
-              paddingHorizontal: 5,
-              width: 145,
+              paddingHorizontal: 7,
+              width: 150,
               alignSelf: "center",
             }}
             onPress={() => {}}
@@ -128,15 +128,15 @@ export default function Dashboard() {
           />
           <Text>Tap for critical info and lock phone</Text>
         </Card>
+        <Card padding="md" borderActive={true} elevationActive={true}>
+          <Text>
+            Lorem ipsum dolor sit amet, consectetur adipisicing elit. Recusandae
+            sunt ab sequi sapiente, nobis a minus! Aliquam eligendi quibusdam
+            aperiam, voluptatibus cumque distinctio doloribus mollitia obcaecati
+            asperiores suscipit provident modi.
+          </Text>
+        </Card>
       </Section>
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  headerContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-});
