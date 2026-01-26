@@ -1,19 +1,37 @@
-import React, { PropsWithChildren } from "react";
-import { StyleSheet, View } from "react-native";
+// Section.tsx
+import React, { PropsWithChildren, ReactNode } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 
-type SectionProps = PropsWithChildren<object>;
+type SectionProps = PropsWithChildren<{
+  header?: ReactNode; // fixed content at the top
+  scrollEnabled?: boolean;
+}>;
 
-export default function Section({ children }: SectionProps) {
+export default function Section({
+  header,
+  children,
+  scrollEnabled = true,
+}: SectionProps) {
   return (
     <View style={styles.shell}>
-      {/* base background (does NOT affect children) */}
       <View style={styles.baseBg} />
-
-      {/* top “glass” tint so clouds show through */}
       <View style={styles.topTint} />
 
-      {/* content stays fully opaque */}
-      <View style={styles.content}>{children}</View>
+      {/* Fixed header area (doesn't scroll) */}
+      {!!header && <View style={styles.fixedHeader}>{header}</View>}
+
+      {/* Scrollable content area */}
+      {scrollEnabled ? (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {children}
+        </ScrollView>
+      ) : (
+        <View style={styles.scrollContent}>{children}</View>
+      )}
     </View>
   );
 }
@@ -29,34 +47,42 @@ const styles = StyleSheet.create({
     borderTopRightRadius: R_TOP,
     borderBottomLeftRadius: R_BOTTOM,
     borderBottomRightRadius: R_BOTTOM,
-    overflow: "hidden", // IMPORTANT: clip the tint to rounded corners
+    overflow: "hidden",
     position: "relative",
 
-    // shadow / elevation on the container
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
     shadowRadius: 16,
-    elevation: 2.5,
+    elevation: 3,
   },
 
-  // the main background for the whole section
   baseBg: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(255, 255, 255, 0.32)", // your colors.bg.section but translucent
+    backgroundColor: "rgba(255, 255, 255, 0.02)",
   },
 
-  // only affects the TOP portion visually
   topTint: {
     position: "absolute",
     left: 0,
     right: 0,
     top: 0,
-    height: "35%", // tweak: top half-ish
+    height: "35%",
+    backgroundColor: "rgba(245,250,255,0.05)",
   },
 
-  content: {
-    flex: 1,
+  fixedHeader: {
     padding: 10,
+    paddingBottom: 6,
+  },
+
+  scroll: {
+    flex: 1,
+  },
+
+  scrollContent: {
+    padding: 10,
+    paddingTop: 13, // because fixedHeader already has padding
+    paddingBottom: 90, // IMPORTANT: so content doesn't hide behind the tab bar
   },
 });

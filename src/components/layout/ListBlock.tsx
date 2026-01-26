@@ -2,14 +2,14 @@ import { colors } from "@/styles/shared-styles";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextStyle,
-  View,
-  ViewStyle,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextStyle,
+    View,
+    ViewStyle,
 } from "react-native";
-import AvatarImage from "../avatar/AvatarImage";
+import AvatarImage from "../profile/AvatarImage";
 
 type ListBlockProps = {
   iconName: React.ComponentProps<typeof Ionicons>["name"];

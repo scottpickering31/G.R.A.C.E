@@ -22,12 +22,7 @@ export default function Screen({
         <View style={styles.fade} />
 
         <View
-          style={[
-            styles.content,
-            // 👇 this is the key
-            { paddingTop: headerHeight },
-            contentStyle,
-          ]}
+          style={[styles.content, { paddingTop: headerHeight }, contentStyle]}
         >
           {children}
         </View>
@@ -44,8 +39,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     top: 0,
-    height: 50,
-    backgroundColor: "rgba(245,250,255,0.85)",
+    height: 120,
+    backgroundColor: "rgba(245,250,255,0.95)",
   },
   content: { flex: 1 },
 });

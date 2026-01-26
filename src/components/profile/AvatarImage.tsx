@@ -19,7 +19,7 @@ type AvatarImageProps = {
   innerBgColor?: string;
 
   // choose ONE: image OR icon
-  source?: ImageSourcePropType; // supports require(...) or { uri: ... }
+  source: ImageSourcePropType; // supports require(...) or { uri: ... }
   iconName?: React.ComponentProps<typeof Ionicons>["name"];
   iconSize?: number;
   iconColor?: string;
