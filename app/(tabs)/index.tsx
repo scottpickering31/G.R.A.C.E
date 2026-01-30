@@ -23,7 +23,7 @@ export default function Dashboard() {
             iconSize={20}
             textStyle={{ color: "#4A90E2" }}
             style={{
-              paddingVertical: 10,
+              paddingVertical: 8,
               paddingHorizontal: 7,
               width: 150,
               alignSelf: "center",
@@ -127,6 +127,30 @@ export default function Dashboard() {
             style={{ backgroundColor: "red", width: "60%" }}
           />
           <Text>Tap for critical info and lock phone</Text>
+        </Card>
+        <Card padding="md" borderActive={true} elevationActive={true}>
+          <Text>
+            Lorem ipsum dolor sit amet, consectetur adipisicing elit. Recusandae
+            sunt ab sequi sapiente, nobis a minus! Aliquam eligendi quibusdam
+            aperiam, voluptatibus cumque distinctio doloribus mollitia obcaecati
+            asperiores suscipit provident modi.
+          </Text>
+        </Card>
+        <Card padding="md" borderActive={true} elevationActive={true}>
+          <Text>
+            Lorem ipsum dolor sit amet, consectetur adipisicing elit. Recusandae
+            sunt ab sequi sapiente, nobis a minus! Aliquam eligendi quibusdam
+            aperiam, voluptatibus cumque distinctio doloribus mollitia obcaecati
+            asperiores suscipit provident modi.
+          </Text>
+        </Card>
+        <Card padding="md" borderActive={true} elevationActive={true}>
+          <Text>
+            Lorem ipsum dolor sit amet, consectetur adipisicing elit. Recusandae
+            sunt ab sequi sapiente, nobis a minus! Aliquam eligendi quibusdam
+            aperiam, voluptatibus cumque distinctio doloribus mollitia obcaecati
+            asperiores suscipit provident modi.
+          </Text>
         </Card>
         <Card padding="md" borderActive={true} elevationActive={true}>
           <Text>

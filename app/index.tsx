@@ -1,6 +1,15 @@
 import Loading from "@/components/Loading";
 import { useAuthStore } from "@/state/auth.store";
 import { useUIStore } from "@/state/ui.store";
+import {
+  useFonts
+} from "@expo-google-fonts/inter";
+import {
+  NunitoSans_400Regular,
+  NunitoSans_500Medium,
+  NunitoSans_600SemiBold,
+  NunitoSans_700Bold,
+} from "@expo-google-fonts/nunito-sans";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
@@ -8,10 +17,18 @@ import { Pressable, Text, View } from "react-native";
 export default function Splash() {
   const router = useRouter();
   const [loadingLocal, setLoadingLocal] = useState(false);
-
   const { showLoading, hideLoading } = useUIStore();
   const session = useAuthStore((s) => s.session);
   const hydrated = useAuthStore((s) => s.hydrated);
+
+  let [fontsLoaded] = useFonts({
+    NunitoSans_400Regular,
+    NunitoSans_500Medium,
+    NunitoSans_600SemiBold,
+    NunitoSans_700Bold,
+  });
+
+  if (!fontsLoaded) return null;
 
   const handlePress = async () => {
     setLoadingLocal(true);
