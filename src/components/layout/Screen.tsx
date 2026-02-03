@@ -22,7 +22,11 @@ export default function Screen({
         <View style={styles.fade} />
 
         <View
-          style={[styles.content, { paddingTop: headerHeight }, contentStyle]}
+          style={[
+            styles.content,
+            { paddingTop: headerHeight - 10 },
+            contentStyle,
+          ]}
         >
           {children}
         </View>

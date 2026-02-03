@@ -1,4 +1,5 @@
 import BackToHomeButton from "@/components/buttons/BackToHomeButton";
+import Loading from "@/src/components/Loading";
 import { useAuthStore } from "@/state/auth.store";
 import { colors } from "@/styles/shared-styles";
 import { Ionicons } from "@expo/vector-icons";
@@ -10,7 +11,9 @@ export default function TabsLayout() {
   const session = useAuthStore((s) => s.session);
   const hydrated = useAuthStore((s) => s.hydrated);
 
-  if (!hydrated) return null;
+  console.log("TABS layout:", { hydrated, hasSession: !!session });
+
+  if (!hydrated) return <Loading />; // ✅ not null
   if (!session) return <Redirect href="/(auth)/login" />;
 
   return (
