@@ -41,6 +41,8 @@ export default function Login() {
     }
 
     router.replace("/(tabs)");
+    const { data } = await supabase.auth.getSession();
+    console.log("POST LOGIN getSession:", !!data.session);
   };
 
   if (submitting) return <Loading />;

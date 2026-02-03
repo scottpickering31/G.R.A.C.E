@@ -1,12 +1,30 @@
+import { router } from "expo-router";
 import React, { useEffect } from "react";
 import { Image, View } from "react-native";
 
 export default function Publisher() {
-  useEffect(() => {}, []);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      router.replace("/(boot)/splash");
+    }, 1500);
+
+    return () => clearTimeout(t);
+  }, []);
 
   return (
-    <View>
-      <Image />
+    <View
+      style={{
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#fff",
+      }}
+    >
+      <Image
+        source={require("../../assets/images/publisher.png")}
+        style={{ width: "100%", height: "100%" }}
+        resizeMode="cover"
+      />
     </View>
   );
 }

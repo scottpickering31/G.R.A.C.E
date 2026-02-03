@@ -9,7 +9,6 @@ export default function RootLayout() {
   useEffect(() => {
     hydrate();
   }, [hydrate]);
-
   return (
     <>
       <StatusBar style="dark" translucent backgroundColor="transparent" />
