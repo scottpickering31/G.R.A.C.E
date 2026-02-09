@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import {
   Image,
@@ -10,26 +9,29 @@ import {
   ViewStyle,
 } from "react-native";
 
+type IconComponentType = React.ComponentType<{
+  size?: number;
+  color?: string;
+}>;
+
 type AvatarImageProps = {
   size?: number;
   onPress?: () => void;
 
-  // background colors
   outerBgColor?: string;
   innerBgColor?: string;
 
   // choose ONE: image OR icon
-  source: ImageSourcePropType; // supports require(...) or { uri: ... }
-  iconName?: React.ComponentProps<typeof Ionicons>["name"];
+  source: ImageSourcePropType | null;
+
+  Icon?: IconComponentType;
   iconSize?: number;
   iconColor?: string;
 
-  // optional style overrides
   outerStyle?: ViewStyle;
   innerStyle?: ViewStyle;
   imageStyle?: ImageStyle;
 
-  // optional shadow
   elevationActive?: boolean;
 };
 
@@ -39,14 +41,12 @@ export default function AvatarImage({
   innerBgColor = "#fff",
   onPress,
   source,
-  iconName,
+  Icon,
   iconSize,
   iconColor = "#4A90E2",
-
   outerStyle,
   innerStyle,
   imageStyle,
-
   elevationActive = true,
 }: AvatarImageProps) {
   const outerSize = size + 7;
@@ -84,9 +84,8 @@ export default function AvatarImage({
               style={[styles.image, imageStyle]}
               resizeMode="cover"
             />
-          ) : iconName ? (
-            <Ionicons
-              name={iconName}
+          ) : Icon ? (
+            <Icon
               size={iconSize ?? Math.round(size * 0.55)}
               color={iconColor}
             />

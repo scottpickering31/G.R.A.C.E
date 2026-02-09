@@ -3,10 +3,13 @@ import Card from "@/components/layout/Card";
 import Screen from "@/components/layout/Screen";
 import Section from "@/components/layout/Section";
 import ProfileHeader from "@/components/profile/ProfileHeader";
+import AppText from "@/src/components/AppText";
 import CollapsibleCalendar from "@/src/components/calendar/CollapsibleCalendar";
+import { theme } from "@/src/theme";
 import { colors } from "@/styles/shared-styles";
+import { Calendar1, ChevronRight, HeartPulse } from "lucide-react-native";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 export default function Appointments() {
   const [date, setDate] = useState(new Date());
@@ -14,43 +17,54 @@ export default function Appointments() {
     <Screen>
       <Section>
         <View style={styles.headerContainer}>
-          <ProfileHeader />
+          <ProfileHeader style={{ width: "60%" }} />
           <PillButton
             label="Add Event"
-            iconName="calendar"
+            Icon={Calendar1}
+            RightIcon={ChevronRight}
             iconColor={colors.brand.primary}
             showIconChip={true}
             rightIconColor={colors.brand.primary}
-            textStyle={{ color: "#4A90E2", fontSize: 17 }}
+            textStyle={{
+              color: "#4A90E2",
+              fontSize: theme.typography.fontSize.sm,
+              fontWeight: "600",
+            }}
             iconSize={20}
             style={{
               paddingVertical: 8,
               paddingHorizontal: 10,
-              width: 160,
+              width: "40%",
             }}
             onPress={() => {}}
           />
         </View>
         <Card padding="md" borderActive={true} elevationActive={true}>
-          <Text>Track all key events and milestones</Text>
+          <AppText style={{ fontSize: theme.typography.fontSize.md }}>
+            Track all key events and milestones.
+          </AppText>
         </Card>
         <Card padding="none" borderActive={true} elevationActive={true}>
           <CollapsibleCalendar value={date} onChange={setDate} />
         </Card>
         <Card padding="md" borderActive={true} elevationActive={true}>
-          <Text>View Timeline</Text>
+          <View>
+            <HeartPulse size={20} color="#1F2937" />
+            <AppText>View Timeline</AppText>
+            <ChevronRight size={20} color="#1F2937" />
+          </View>
         </Card>
-        <Text>Sunday, April 20 ------- Today</Text>
+        <AppText>Sunday, April 20 Today</AppText>
         <Card padding="md" borderActive={true} elevationActive={true}>
-          <Text>Paediatric Appointment</Text>
-          <Text>Paediatric Appointment</Text>
-          <Text>Paediatric Appointment</Text>
+          <AppText>Paediatric Appointment</AppText>
+          <AppText>Paediatric Appointment</AppText>
+          <AppText>Paediatric Appointment</AppText>
         </Card>
         <Card padding="md" borderActive={true} elevationActive={true}>
-          <Text>Katies 6th surgery: G-Tube placed</Text>
+          <AppText>Katies 6th surgery: G-Tube placed</AppText>
         </Card>
         <Card padding="md" borderActive={true} elevationActive={true}>
-          <Text>OT Therapy Session</Text>
+          <AppText>OT Therapy Session</AppText>
         </Card>
       </Section>
     </Screen>

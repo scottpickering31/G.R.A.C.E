@@ -1,10 +1,22 @@
 import Section from "@/components/layout/Section";
+import AppText from "@/src/components/AppText";
 import Card from "@/src/components/layout/Card";
 import ListBlock from "@/src/components/layout/ListBlock";
 import Screen from "@/src/components/layout/Screen";
 import ProfileHeader from "@/src/components/profile/ProfileHeader";
-import { Ionicons } from "@expo/vector-icons";
-import { Text, View } from "react-native";
+import {
+  AlarmClock,
+  AlertCircle,
+  Bandage,
+  CalendarCheck,
+  ChevronRight,
+  Pill,
+  PillBottle,
+  Plus,
+  Syringe,
+  Tablets,
+} from "lucide-react-native";
+import { View } from "react-native";
 
 export default function MedicationsTreatments() {
   return (
@@ -12,7 +24,7 @@ export default function MedicationsTreatments() {
       <Section>
         <ProfileHeader />
         <Card padding="cardInset" borderActive={true} elevationActive={true}>
-          <Text>Stay on top of medications and monitor treatments.</Text>
+          <AppText>Stay on top of medications and monitor treatments.</AppText>
         </Card>
         <Card elevationActive={true} borderActive={true} padding={"md"}>
           <View
@@ -22,8 +34,9 @@ export default function MedicationsTreatments() {
               alignItems: "center",
             }}
           >
-            <Text style={{ fontWeight: "500" }}>Timed Reminders</Text>
-            <Text>
+            <AlarmClock size={20} color="#1F2937" />
+            <AppText style={{ fontWeight: "500" }}>Timed Reminders</AppText>
+            <AppText>
               2 reminders today
               <View
                 style={{
@@ -33,15 +46,15 @@ export default function MedicationsTreatments() {
                   justifyContent: "center",
                 }}
               >
-                <Ionicons name="alert" color="#fff" />
+                <AlertCircle size={16} color="#fff" />
               </View>
-              <Ionicons name="chevron-forward" />
-            </Text>
+              <ChevronRight size={16} color="#1F2937" />
+            </AppText>
           </View>
           <Card elevationActive={false} borderActive={false} padding={"none"}>
             <View>
               <ListBlock
-                iconName="medical-outline"
+                Icon={PillBottle}
                 iconBgColor="rgba(74, 144, 226, 0.18)"
                 title="Meds Due"
                 subtitle="Next: 10:00 AM"
@@ -50,7 +63,7 @@ export default function MedicationsTreatments() {
                 onPress={() => {}}
               />
               <ListBlock
-                iconName="medical-outline"
+                Icon={Pill}
                 iconBgColor="rgba(74, 144, 226, 0.18)"
                 title="Meds Due"
                 subtitle="Next: 10:00 AM"
@@ -58,7 +71,8 @@ export default function MedicationsTreatments() {
                 showChevron={false}
                 onPress={() => {}}
               />
-              <Text>Add Medication</Text>
+              <Plus size={20} color="#1F2937" />
+              <AppText>Add Medication</AppText>
             </View>
           </Card>
         </Card>
@@ -66,11 +80,12 @@ export default function MedicationsTreatments() {
           <View
             style={{ flexDirection: "row", justifyContent: "space-between" }}
           >
-            <Text style={{ fontWeight: "500" }}>Medications</Text>
-            <Ionicons name="chevron-forward" />
+            <CalendarCheck size={20} color="#1F2937" />
+            <AppText style={{ fontWeight: "500" }}>Medications</AppText>
+            <ChevronRight size={16} color="#1F2937" />
           </View>
           <ListBlock
-            iconName="medical-outline"
+            Icon={Bandage}
             iconBgColor="rgba(74, 144, 226, 0.18)"
             title="Meds Due"
             subtitle="Next: 10:00 AM"
@@ -79,7 +94,7 @@ export default function MedicationsTreatments() {
             onPress={() => {}}
           />
           <ListBlock
-            iconName="medical-outline"
+            Icon={Syringe}
             iconBgColor="rgba(74, 144, 226, 0.18)"
             title="Meds Due"
             subtitle="Next: 10:00 AM"
@@ -88,7 +103,7 @@ export default function MedicationsTreatments() {
             onPress={() => {}}
           />
           <ListBlock
-            iconName="medical-outline"
+            Icon={Tablets}
             iconBgColor="rgba(74, 144, 226, 0.18)"
             title="Meds Due"
             subtitle="Next: 10:00 AM"

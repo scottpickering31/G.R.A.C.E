@@ -1,15 +1,16 @@
+import AppText from "@/src/components/AppText";
 import { router } from "expo-router";
 import React from "react";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, View } from "react-native";
 
 export default function Task1() {
   return (
     <View>
-      <Text>Task1</Text>
-      <Text>Task2</Text>
-      <Text>Task3</Text>
+      <AppText>Task1</AppText>
+      <AppText>Task2</AppText>
+      <AppText>Task3</AppText>
       <Pressable onPress={router.back}>
-        <Text>Close</Text>
+        <AppText>Close</AppText>
       </Pressable>
     </View>
   );

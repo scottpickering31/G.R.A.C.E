@@ -1,12 +1,13 @@
 import Loading from "@/components/Loading";
 import { supabase } from "@/services/supabase";
+import AppText from "@/src/components/AppText";
 import { authSchema, type AuthForm } from "@/state/auth.schema";
 import { useUIStore } from "@/state/ui.store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, TextInput, View } from "react-native";
 
 export default function Login() {
   const router = useRouter();
@@ -49,7 +50,9 @@ export default function Login() {
 
   return (
     <View style={{ flex: 1, padding: 24, justifyContent: "center", gap: 12 }}>
-      <Text style={{ fontSize: 28, fontWeight: "800" }}>Login</Text>
+      <AppText weight={"bold"} style={{ fontSize: 32 }}>
+        Login
+      </AppText>
 
       <TextInput
         placeholder="Email"
@@ -60,7 +63,7 @@ export default function Login() {
         {...register("email")}
       />
       {errors.email ? (
-        <Text style={{ color: "crimson" }}>{errors.email.message}</Text>
+        <AppText style={{ color: "crimson" }}>{errors.email.message}</AppText>
       ) : null}
 
       <TextInput
@@ -71,7 +74,9 @@ export default function Login() {
         {...register("password")}
       />
       {errors.password ? (
-        <Text style={{ color: "crimson" }}>{errors.password.message}</Text>
+        <AppText style={{ color: "crimson" }}>
+          {errors.password.message}
+        </AppText>
       ) : null}
 
       <Pressable
@@ -83,18 +88,21 @@ export default function Login() {
           borderRadius: 12,
         }}
       >
-        <Text style={{ color: "#fff", textAlign: "center", fontWeight: "700" }}>
+        <AppText
+          style={{ color: "#fff", textAlign: "center", fontWeight: "700" }}
+        >
           Login
-        </Text>
+        </AppText>
       </Pressable>
 
       <Pressable
         onPress={() => router.replace("/(auth)/signup")}
         style={{ padding: 10 }}
       >
-        <Text style={{ textAlign: "center", opacity: 0.8 }}>
-          Need an account? <Text style={{ fontWeight: "700" }}>Sign up</Text>
-        </Text>
+        <AppText style={{ textAlign: "center", opacity: 0.8 }}>
+          Need an account?{" "}
+          <AppText style={{ fontWeight: "700" }}>Sign up</AppText>
+        </AppText>
       </Pressable>
     </View>
   );

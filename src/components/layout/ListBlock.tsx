@@ -1,20 +1,22 @@
+import { theme } from "@/src/theme";
 import { colors } from "@/styles/shared-styles";
-import { Ionicons } from "@expo/vector-icons";
+import { ChevronRight, LucideIcon } from "lucide-react-native";
 import React from "react";
 import {
   Pressable,
   StyleSheet,
-  Text,
   TextStyle,
   View,
   ViewStyle,
 } from "react-native";
+import AppText from "../AppText";
 import AvatarImage from "../profile/AvatarImage";
 
 type ListBlockProps = {
-  iconName: React.ComponentProps<typeof Ionicons>["name"];
+  Icon: LucideIcon;
   iconBgColor?: string;
   iconColor?: string;
+  iconSize?: number;
 
   title: string;
   subtitle?: string;
@@ -23,17 +25,18 @@ type ListBlockProps = {
   rightTextContainer?: ViewStyle;
   rightTextStyles?: TextStyle;
 
-  showChevron?: boolean; // optional override
-  onPress?: () => void; // if undefined => not pressable
+  showChevron?: boolean;
+  onPress?: () => void;
   showDivider?: boolean;
 
   style?: ViewStyle;
 };
 
 export default function ListBlock({
-  iconName,
+  Icon,
   iconBgColor = "rgba(74, 144, 226, 0.18)",
   iconColor = colors.brand.primary,
+  iconSize,
 
   title,
   subtitle,
@@ -48,56 +51,53 @@ export default function ListBlock({
   style,
 }: ListBlockProps) {
   const isPressable = !!onPress;
-  const Container: any = isPressable ? Pressable : View;
-
-  // Default behavior: show chevron only when pressable
   const shouldShowChevron = showChevron ?? isPressable;
 
   return (
     <View style={style}>
-      <Container
-        {...(isPressable ? { onPress } : {})}
-        style={({ pressed }: any) => [
+      <Pressable
+        disabled={!isPressable}
+        onPress={onPress}
+        style={({ pressed }) => [
           styles.row,
           isPressable && pressed && styles.pressed,
         ]}
       >
         <AvatarImage
           size={34}
-          iconName={iconName}
+          source={null}
+          Icon={Icon}
+          iconSize={iconSize}
           innerBgColor={iconBgColor}
           iconColor={iconColor}
+          elevationActive={false}
         />
 
         <View style={styles.textCol}>
-          <Text style={styles.title} numberOfLines={1}>
+          <AppText style={styles.title} numberOfLines={1}>
             {title}
-          </Text>
+          </AppText>
 
           {!!subtitle && (
-            <Text style={styles.subtitle} numberOfLines={1}>
+            <AppText style={styles.subtitle} numberOfLines={1}>
               {subtitle}
-            </Text>
+            </AppText>
           )}
         </View>
 
         <View style={[styles.rightCol, rightTextContainer]}>
           {!!rightText && (
-            <Text style={[styles.rightText, rightTextStyles]} numberOfLines={1}>
+            <AppText
+              style={[styles.rightText, rightTextStyles]}
+              numberOfLines={1}
+            >
               {rightText}
-            </Text>
+            </AppText>
           )}
 
-          {shouldShowChevron && (
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color="rgba(31,41,55,0.45)"
-              style={styles.chevron}
-            />
-          )}
+          {shouldShowChevron && <ChevronRight size={20} />}
         </View>
-      </Container>
+      </Pressable>
 
       {showDivider && <View style={styles.divider} />}
     </View>
@@ -120,29 +120,29 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   title: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: "700",
     color: colors.text.primary,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     color: colors.text.secondary,
   },
   rightCol: {
     flexDirection: "row",
     alignItems: "center",
     marginLeft: 10,
+    borderRadius: 45,
   },
   rightText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: "600",
     color: colors.text.secondary,
-  },
-  chevron: {
-    marginLeft: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: "rgba(31,41,55,0.08)",
-    marginLeft: 14 + 34 + 12,
+    backgroundColor: "rgba(31,41,55,0.05)",
   },
 });

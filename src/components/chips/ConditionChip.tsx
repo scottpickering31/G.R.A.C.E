@@ -1,10 +1,11 @@
 import React from "react";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import AppText from "../AppText";
 
 export default function ConditionChip() {
   return (
     <View>
-      <Text>ConditionChip</Text>
+      <AppText>ConditionChip</AppText>
     </View>
   );
 }

@@ -23,9 +23,8 @@ export default function Section({
       {/* Scrollable content area */}
       {scrollEnabled ? (
         <ScrollView
-          style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={true}
         >
           {children}
         </ScrollView>
@@ -36,29 +35,14 @@ export default function Section({
   );
 }
 
-const R_TOP = 24;
-const R_BOTTOM = 50;
-
 const styles = StyleSheet.create({
   shell: {
     flex: 1,
-    marginHorizontal: 10,
-    borderTopLeftRadius: R_TOP,
-    borderTopRightRadius: R_TOP,
-    borderBottomLeftRadius: R_BOTTOM,
-    borderBottomRightRadius: R_BOTTOM,
     overflow: "hidden",
     position: "relative",
-
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 3,
   },
 
   baseBg: {
-    ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(255, 255, 255, 0.02)",
   },
 
@@ -76,13 +60,9 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
 
-  scroll: {
-    flex: 1,
-  },
-
   scrollContent: {
     padding: 10,
-    paddingTop: 13, // because fixedHeader already has padding
-    paddingBottom: 90, // IMPORTANT: so content doesn't hide behind the tab bar
+    paddingTop: 10,
+    paddingBottom: 90,
   },
 });

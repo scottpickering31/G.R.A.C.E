@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     height: 120,
-    backgroundColor: "rgba(245,250,255,0.95)",
+    backgroundColor: "rgba(245,250,255,0)",
   },
   content: { flex: 1 },
 });
