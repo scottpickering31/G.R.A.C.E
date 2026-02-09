@@ -1,11 +1,16 @@
-import React, { PropsWithChildren } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import React from "react";
+import { Pressable, StyleSheet, View, ViewStyle } from "react-native";
 import AvatarImage from "./AvatarImage";
 import ProfileSwitcher from "./ProfileSwitcher";
 
-export default function ProfileHeader({ children }: PropsWithChildren) {
+export type ProfileHeaderProps = {
+  style?: ViewStyle;
+  children?: React.ReactNode;
+};
+
+export default function ProfileHeader({ style, children }: ProfileHeaderProps) {
   return (
-    <View style={styles.headerContainer}>
+    <View style={[styles.headerContainer, style]}>
       <View style={{ flexDirection: "row", gap: 7 }}>
         <Pressable
           onPress={() => {
@@ -17,7 +22,7 @@ export default function ProfileHeader({ children }: PropsWithChildren) {
           <View>
             <AvatarImage
               source={require("../../../assets/images/girl.png")}
-              size={95}
+              size={85}
             />
           </View>
         </Pressable>
@@ -30,6 +35,7 @@ export default function ProfileHeader({ children }: PropsWithChildren) {
 
 const styles = StyleSheet.create({
   headerContainer: {
+    width: "60%",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",

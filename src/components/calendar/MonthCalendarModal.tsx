@@ -1,7 +1,8 @@
 import { cardStyles, colors } from "@/styles/shared-styles";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, View } from "react-native";
+import AppText from "../AppText";
 
 type Props = {
   visible: boolean;
@@ -105,7 +106,9 @@ export default function MonthCalendarModal({
               />
             </Pressable>
 
-            <Text style={styles.headerTitle}>{formatMonthYear(cursor)}</Text>
+            <AppText style={styles.headerTitle}>
+              {formatMonthYear(cursor)}
+            </AppText>
 
             <Pressable
               onPress={() => setCursor((d) => addMonths(d, 1))}
@@ -121,9 +124,9 @@ export default function MonthCalendarModal({
 
           <View style={styles.weekHeader}>
             {DAY_NAMES.map((n) => (
-              <Text key={n} style={styles.weekHeaderText}>
+              <AppText key={n} style={styles.weekHeaderText}>
                 {n}
-              </Text>
+              </AppText>
             ))}
           </View>
 
@@ -136,7 +139,7 @@ export default function MonthCalendarModal({
                   onPress={() => onSelect(date)}
                   style={[styles.cell, active && styles.cellActive]}
                 >
-                  <Text
+                  <AppText
                     style={[
                       styles.cellText,
                       !inMonth && styles.cellTextMuted,
@@ -144,14 +147,14 @@ export default function MonthCalendarModal({
                     ]}
                   >
                     {date.getDate()}
-                  </Text>
+                  </AppText>
                 </Pressable>
               );
             })}
           </View>
 
           <Pressable onPress={onClose} style={styles.closeBtn}>
-            <Text style={styles.closeText}>Close</Text>
+            <AppText style={styles.closeText}>Close</AppText>
           </Pressable>
         </Pressable>
       </Pressable>

@@ -1,10 +1,10 @@
 import Section from "@/components/layout/Section";
-import { Text } from "react-native";
+import AppText from "@/src/components/AppText";
 
 export default function CareCircle() {
   return (
     <Section>
-      <Text>CareCircle</Text>
+      <AppText>CareCircle</AppText>
     </Section>
   );
 }

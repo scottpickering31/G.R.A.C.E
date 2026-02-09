@@ -1,34 +1,33 @@
 import { cardStyles } from "@/styles/shared-styles";
-import { Ionicons } from "@expo/vector-icons";
+import type { LucideIcon } from "lucide-react-native";
 import React from "react";
 import {
   Platform,
   Pressable,
   StyleSheet,
-  Text,
   TextStyle,
   View,
   ViewStyle,
 } from "react-native";
+import AppText from "../AppText";
 
 type PillButtonProps = {
   label: string;
   onPress?: () => void;
 
-  iconName?: React.ComponentProps<typeof Ionicons>["name"];
+  Icon?: LucideIcon;
   iconSize?: number;
   iconColor?: string;
   iconBgColor?: string;
   showIconChip?: boolean;
 
-  rightIconName?: React.ComponentProps<typeof Ionicons>["name"];
+  RightIcon?: LucideIcon;
   rightIconColor?: string;
 
   disabled?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
 
-  // optional toggle if you want
   elevationActive?: boolean;
   borderActive?: boolean;
 };
@@ -36,17 +35,16 @@ type PillButtonProps = {
 export default function PillButton({
   label,
   onPress,
-  iconName = "folder-outline",
+  Icon,
   iconSize,
   iconColor = "#3B82F6",
   iconBgColor = "rgba(59, 130, 246, 0.12)",
   showIconChip = true,
-  rightIconName = "chevron-forward",
+  RightIcon,
   rightIconColor = "rgba(31,41,55,0.45)",
   disabled,
   style,
   textStyle,
-
   elevationActive = true,
   borderActive = true,
 }: PillButtonProps) {
@@ -56,40 +54,41 @@ export default function PillButton({
       disabled={disabled}
       style={({ pressed }) => [
         styles.pill,
-
-        // border
         borderActive && cardStyles.border,
-
-        // shadow / elevation
         elevationActive &&
           (Platform.OS === "android"
             ? styles.androidElevation
             : cardStyles.shadow),
-
         pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
         style,
       ]}
     >
-      {iconName ? (
-        showIconChip ? (
+      {Icon &&
+        (showIconChip ? (
           <View style={[styles.leftIconWrap, { backgroundColor: iconBgColor }]}>
-            <Ionicons name={iconName} size={iconSize} color={iconColor} />
+            <Icon
+              size={iconSize ?? 18}
+              color={disabled ? "rgba(31,41,55,0.25)" : iconColor}
+            />
           </View>
         ) : (
-          <Ionicons name={iconName} size={iconSize} color={iconColor} />
-        )
-      ) : null}
+          <Icon
+            size={iconSize ?? 18}
+            color={disabled ? "rgba(31,41,55,0.25)" : iconColor}
+          />
+        ))}
 
-      <Text style={[styles.label, textStyle]} numberOfLines={1}>
+      <AppText style={[styles.label, textStyle]} numberOfLines={1}>
         {label}
-      </Text>
+      </AppText>
 
-      <Ionicons
-        name={rightIconName}
-        size={18}
-        color={disabled ? "rgba(31,41,55,0.25)" : rightIconColor}
-      />
+      {RightIcon && (
+        <RightIcon
+          size={18}
+          color={disabled ? "rgba(31,41,55,0.25)" : rightIconColor}
+        />
+      )}
     </Pressable>
   );
 }
@@ -97,10 +96,11 @@ export default function PillButton({
 const styles = StyleSheet.create({
   pill: {
     flexDirection: "row",
-    alignItems: "center",
     gap: 6,
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingHorizontal: 7,
     borderRadius: 999,
     backgroundColor: "rgba(255,255,255,0.92)",
 
@@ -118,7 +118,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   label: {
-    flex: 1,
     fontSize: 16,
     fontWeight: "400",
     color: "#1F2937",

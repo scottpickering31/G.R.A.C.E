@@ -1,6 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
+import { theme } from "@/src/theme";
+import { CalendarDays, ChevronDown } from "lucide-react-native";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import AppText from "../AppText";
 
 export default function ProfileSwitcher() {
   return (
@@ -11,15 +13,21 @@ export default function ProfileSwitcher() {
         }}
       >
         <View style={styles.container}>
-          <Text style={{ fontWeight: "500", fontSize: 20 }}>Katie</Text>
-          <Ionicons
-            name="chevron-down"
-            style={{ marginTop: 5, marginLeft: 5 }}
-          />
+          <AppText
+            style={{
+              fontSize: theme.typography.fontSize.lg,
+            }}
+            weight="bold"
+          >
+            Katie
+          </AppText>
+          <ChevronDown style={{ marginTop: 5, marginLeft: 5 }} />
         </View>
         <View style={styles.container}>
-          <Ionicons name="at-circle" size={18} />
-          <Text style={{ fontSize: 16 }}>Age: 5</Text>
+          <CalendarDays size={18} />
+          <AppText style={{ fontSize: theme.typography.fontSize.sm }}>
+            Age: 5
+          </AppText>
         </View>
       </Pressable>
     </View>
@@ -30,7 +38,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 2,
+    gap: 5,
   },
   textContainer: {
     flexDirection: "column",

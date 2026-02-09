@@ -1,7 +1,7 @@
 import BackToHomeButton from "@/components/buttons/BackToHomeButton";
 import Loading from "@/src/components/Loading";
+import { theme } from "@/src/theme";
 import { useAuthStore } from "@/state/auth.store";
-import { colors } from "@/styles/shared-styles";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, Tabs, useRouter } from "expo-router";
 
@@ -13,7 +13,7 @@ export default function TabsLayout() {
 
   console.log("TABS layout:", { hydrated, hasSession: !!session });
 
-  if (!hydrated) return <Loading />; // ✅ not null
+  if (!hydrated) return <Loading />;
   if (!session) return <Redirect href="/(auth)/login" />;
 
   return (
@@ -24,20 +24,12 @@ export default function TabsLayout() {
         headerTransparent: true,
         headerShadowVisible: false,
         headerTitleStyle: { fontWeight: "700" },
-        headerStyle: { backgroundColor: "transparent" },
 
         tabBarStyle: {
-          position: "absolute",
-          height: 83,
-          marginHorizontal: 5,
-          paddingBottom: 12,
-          paddingTop: 10,
-          backgroundColor: "#FFFFFF",
-          borderRadius: 40,
-          borderTopWidth: 0,
-          borderWidth: 1,
-          borderColor: "rgba(30, 58, 138, 0.08)",
-
+          borderColor: "rgba(30, 58, 138, 0.2)",
+          backgroundColor: "rgba(255, 255, 255, 0.95)",
+          height: "10%",
+          paddingTop: 15,
           // shadow (iOS)
           shadowColor: "#000",
           shadowOpacity: 0.08,
@@ -49,10 +41,10 @@ export default function TabsLayout() {
         },
 
         // ✅ label/icon styling
-        tabBarActiveTintColor: colors.brand.primary,
+        tabBarActiveTintColor: theme.colors.brand.primary,
         tabBarInactiveTintColor: "#9AA7B6",
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: theme.typography.fontSize.xs,
           fontWeight: "600",
         },
       }}
@@ -143,6 +135,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="(pages)/emergency"
         options={{ href: null, title: "Emergency" }}
+      />
+      <Tabs.Screen
+        name="(pages)/allergies-alerts"
+        options={{ href: null, title: "Allergies & Alerts" }}
       />
     </Tabs>
   );

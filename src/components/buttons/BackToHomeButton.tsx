@@ -1,5 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
 import { usePathname, useRouter } from "expo-router";
+import { ChevronLeft, House } from "lucide-react-native";
 import { Pressable } from "react-native";
 
 export default function BackToHomeButton() {
@@ -14,12 +14,12 @@ export default function BackToHomeButton() {
       onPress={() => {
         if (!isHome) router.back();
       }}
-      style={{ paddingHorizontal: 12 }}
+      style={{ paddingHorizontal: 15 }}
     >
       {isHome ? (
-        <Ionicons name="home-outline" size={22} color="#1F2937" />
+        <House size={26} color="#1F2937" />
       ) : (
-        <Ionicons name="chevron-back" size={26} color="#1F2937" />
+        <ChevronLeft size={26} color="#1F2937" />
       )}
     </Pressable>
   );

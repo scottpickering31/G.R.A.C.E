@@ -1,10 +1,10 @@
 import Section from "@/components/layout/Section";
-import { Text } from "react-native";
+import AppText from "@/src/components/AppText";
 
 export default function NotesLogsMedia() {
   return (
     <Section>
-      <Text>NotesLogsMedia</Text>
+      <AppText>NotesLogsMedia</AppText>
     </Section>
   );
 }

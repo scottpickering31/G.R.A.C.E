@@ -1,7 +1,9 @@
+import { theme } from "@/src/theme";
 import { cardStyles, colors } from "@/styles/shared-styles";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
+import { Pressable, StyleSheet, View, ViewStyle } from "react-native";
+import AppText from "../AppText";
 import MonthCalendarModal from "./MonthCalendarModal";
 
 type Props = {
@@ -70,7 +72,9 @@ export default function CollapsibleCalendar({ value, onChange, style }: Props) {
               size={18}
               color={colors.brand.primary}
             />
-            <Text style={styles.monthText}>{formatMonthYear(monthAnchor)}</Text>
+            <AppText style={styles.monthText}>
+              {formatMonthYear(monthAnchor)}
+            </AppText>
             <Ionicons
               name="chevron-forward"
               size={18}
@@ -88,9 +92,9 @@ export default function CollapsibleCalendar({ value, onChange, style }: Props) {
         {/* Week header */}
         <View style={styles.weekHeader}>
           {DAY_NAMES.map((n) => (
-            <Text key={n} style={styles.weekHeaderText}>
+            <AppText key={n} style={styles.weekHeaderText}>
               {n}
-            </Text>
+            </AppText>
           ))}
         </View>
 
@@ -107,11 +111,13 @@ export default function CollapsibleCalendar({ value, onChange, style }: Props) {
                 {active ? (
                   <View style={styles.activePillWrap}>
                     <View style={styles.activePill}>
-                      <Text style={styles.activeDayText}>{d.getDate()}</Text>
+                      <AppText style={styles.activeDayText}>
+                        {d.getDate()}
+                      </AppText>
                     </View>
                   </View>
                 ) : (
-                  <Text style={styles.dayText}>{d.getDate()}</Text>
+                  <AppText style={styles.dayText}>{d.getDate()}</AppText>
                 )}
 
                 {/* optional dot indicator (example) */}
@@ -155,8 +161,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   monthText: {
-    fontSize: 20,
-    fontWeight: "700",
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: "600",
     color: colors.text.primary,
   },
 

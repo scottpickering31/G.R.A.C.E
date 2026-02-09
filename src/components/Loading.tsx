@@ -1,5 +1,6 @@
 import { useUIStore } from "@/state/ui.store";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
+import AppText from "./AppText";
 
 export default function Loading() {
   const { message } = useUIStore();
@@ -14,7 +15,7 @@ export default function Loading() {
       }}
     >
       <ActivityIndicator size="large" />
-      {message ? <Text style={{ opacity: 0.7 }}>{message}</Text> : null}
+      {message ? <AppText style={{ opacity: 0.7 }}>{message}</AppText> : null}
     </View>
   );
 }

@@ -3,77 +3,109 @@ import Card from "@/components/layout/Card";
 import ListBlock from "@/components/layout/ListBlock";
 import Screen from "@/components/layout/Screen";
 import Section from "@/components/layout/Section";
+import AppText from "@/src/components/AppText";
+import CurrentTime from "@/src/components/calendar/CurrentTime";
 import ProfileHeader from "@/src/components/profile/ProfileHeader";
+import { theme } from "@/src/theme";
 import { colors } from "@/styles/shared-styles";
 import { router } from "expo-router";
-import { Text, View } from "react-native";
+import {
+  AlertTriangle,
+  BriefcaseMedical,
+  CalendarClock,
+  CheckSquare2,
+  ChevronRight,
+  Clock,
+  Pill,
+  ScanFace,
+} from "lucide-react-native";
+import { View } from "react-native";
 
 export default function Dashboard() {
   return (
     <Screen>
       <Section>
-        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <ProfileHeader />
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            width: "100%",
+          }}
+        >
+          <ProfileHeader style={{ width: "57%" }} />
           <PillButton
             label="Add Profile"
-            iconName="person-add-outline"
+            Icon={ScanFace}
+            RightIcon={ChevronRight}
             iconColor={colors.brand.primary}
             showIconChip={true}
             rightIconColor={colors.brand.primary}
             iconSize={20}
-            textStyle={{ color: "#4A90E2" }}
+            textStyle={{
+              color: "#4A90E2",
+              fontSize: theme.typography.fontSize.sm,
+              fontWeight: "600",
+            }}
             style={{
               paddingVertical: 8,
               paddingHorizontal: 7,
-              width: 150,
+              width: "43%",
               alignSelf: "center",
             }}
             onPress={() => {}}
           />
         </View>
-        <Card elevationActive={true} borderActive={true} padding="lg">
-          <Text>
-            <Text style={{ fontWeight: "700" }}>Welcome back!</Text> Here’s a
-            look at today’s schedule:
-          </Text>
+        <Card elevationActive={true} borderActive={true} padding="sm">
+          <AppText>
+            <AppText style={{ fontWeight: "700", textAlign: "center" }}>
+              Welcome back!
+            </AppText>{" "}
+            Here’s a look at today’s schedule:
+          </AppText>
         </Card>
 
         <Card elevationActive={true} borderActive={true} padding={"md"}>
-          <Text style={{ fontWeight: "500" }}>Todays Overview:</Text>
+          <View
+            style={{ flexDirection: "row", justifyContent: "space-between" }}
+          >
+            <AppText style={{ fontWeight: "700" }}>Todays Overview:</AppText>
+            <View
+              style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
+            >
+              <Clock size={20} color="#4A90E2" />
+              <CurrentTime />
+            </View>
+          </View>
           <Card elevationActive={false} borderActive={false} padding={"none"}>
             <View>
               <ListBlock
-                iconName="medical-outline"
+                Icon={Pill}
                 iconBgColor="rgba(74, 144, 226, 0.18)"
                 title="Meds Due"
                 subtitle="Next: 10:00 AM"
                 rightText="3 Medications"
-                rightTextStyles={{
-                  fontWeight: "500",
-                }}
                 rightTextContainer={{
-                  borderRadius: 45,
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  backgroundColor: colors.bg.danger,
+                  backgroundColor: theme.colors.bg.skyMid,
                 }}
-                showChevron={false}
                 onPress={() => {
                   return null;
                 }}
               />
 
               <ListBlock
-                iconName="calendar-outline"
+                Icon={CalendarClock}
                 iconBgColor="rgba(126, 200, 160, 0.22)"
                 title="Appointments"
                 subtitle="Speech Therapy"
                 rightText="1:00 PM"
+                rightTextContainer={{
+                  backgroundColor: "rgba(126, 200, 160, 0.22)",
+                }}
                 onPress={() => router.push("/appointments")}
               />
 
               <ListBlock
-                iconName="checkbox-outline"
+                Icon={CheckSquare2}
                 iconBgColor="rgba(245, 193, 108, 0.25)"
                 title="Tasks"
                 subtitle="2 Tasks"
@@ -81,20 +113,14 @@ export default function Dashboard() {
               />
 
               <ListBlock
-                iconName="alert-circle-outline"
+                Icon={AlertTriangle}
                 iconBgColor="rgba(233, 107, 107, 0.22)"
                 iconColor={colors.semantic.danger}
                 title="Alerts"
                 subtitle="Insulin dose deviation"
                 rightText="View all"
-                rightTextStyles={{
-                  paddingVertical: 8,
-                  paddingHorizontal: 10,
-                  fontWeight: "500",
-                }}
                 rightTextContainer={{
-                  borderRadius: 45,
-                  backgroundColor: colors.bg.info,
+                  backgroundColor: colors.bg.danger,
                 }}
                 onPress={() => {}}
                 showDivider={false}
@@ -115,50 +141,51 @@ export default function Dashboard() {
             borderActive={false}
             elevationActive={false}
             showIconChip={false}
-            iconName="medkit"
+            Icon={BriefcaseMedical}
             iconColor="white"
             iconSize={25}
-            rightIconName="chevron-forward"
+            RightIcon={ChevronRight}
             textStyle={{
               color: "white",
-              fontWeight: "500",
+              fontWeight: "700",
               textAlign: "center",
+              fontSize: theme.typography.fontSize.lg,
             }}
             style={{ backgroundColor: "red", width: "60%" }}
           />
-          <Text>Tap for critical info and lock phone</Text>
+          <AppText>Tap for critical info and lock phone</AppText>
         </Card>
         <Card padding="md" borderActive={true} elevationActive={true}>
-          <Text>
+          <AppText>
             Lorem ipsum dolor sit amet, consectetur adipisicing elit. Recusandae
             sunt ab sequi sapiente, nobis a minus! Aliquam eligendi quibusdam
             aperiam, voluptatibus cumque distinctio doloribus mollitia obcaecati
             asperiores suscipit provident modi.
-          </Text>
+          </AppText>
         </Card>
         <Card padding="md" borderActive={true} elevationActive={true}>
-          <Text>
+          <AppText>
             Lorem ipsum dolor sit amet, consectetur adipisicing elit. Recusandae
             sunt ab sequi sapiente, nobis a minus! Aliquam eligendi quibusdam
             aperiam, voluptatibus cumque distinctio doloribus mollitia obcaecati
             asperiores suscipit provident modi.
-          </Text>
+          </AppText>
         </Card>
         <Card padding="md" borderActive={true} elevationActive={true}>
-          <Text>
+          <AppText>
             Lorem ipsum dolor sit amet, consectetur adipisicing elit. Recusandae
             sunt ab sequi sapiente, nobis a minus! Aliquam eligendi quibusdam
             aperiam, voluptatibus cumque distinctio doloribus mollitia obcaecati
             asperiores suscipit provident modi.
-          </Text>
+          </AppText>
         </Card>
         <Card padding="md" borderActive={true} elevationActive={true}>
-          <Text>
+          <AppText>
             Lorem ipsum dolor sit amet, consectetur adipisicing elit. Recusandae
             sunt ab sequi sapiente, nobis a minus! Aliquam eligendi quibusdam
             aperiam, voluptatibus cumque distinctio doloribus mollitia obcaecati
             asperiores suscipit provident modi.
-          </Text>
+          </AppText>
         </Card>
       </Section>
     </Screen>
