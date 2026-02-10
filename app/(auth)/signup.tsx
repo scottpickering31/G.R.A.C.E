@@ -41,7 +41,6 @@ export default function Signup() {
       alert(error.message);
       return;
     }
-
     router.replace("/(tabs)");
   };
 
