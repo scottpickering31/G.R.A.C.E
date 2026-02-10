@@ -28,7 +28,7 @@ export default function Login() {
     setSubmitting(true);
     showLoading("Logging you in...");
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
     });
@@ -36,14 +36,11 @@ export default function Login() {
     hideLoading();
     setSubmitting(false);
 
-    if (error) {
-      alert(error.message);
+    if (signInError) {
+      alert(signInError.message);
       return;
     }
-
-    router.replace("/(tabs)");
-    const { data } = await supabase.auth.getSession();
-    console.log("POST LOGIN getSession:", !!data.session);
+    router.replace("/post-login");
   };
 
   if (submitting) return <Loading />;
