@@ -1,12 +1,12 @@
+import { queryClient } from "@/src/lib/queryclient";
 import { useAuthStore } from "@/state/auth.store";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
-  const [queryClient] = useState(() => new QueryClient());
   const hydrate = useAuthStore((s) => s.hydrate);
 
   useEffect(() => {

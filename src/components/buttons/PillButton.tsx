@@ -13,8 +13,9 @@ import AppText from "../AppText";
 
 type PillButtonProps = {
   label: string;
+  subtitle?: string;
   onPress?: () => void;
-
+  labelWrap?: ViewStyle;
   Icon?: LucideIcon;
   iconSize?: number;
   iconColor?: string;
@@ -34,6 +35,7 @@ type PillButtonProps = {
 
 export default function PillButton({
   label,
+  subtitle,
   onPress,
   Icon,
   iconSize,
@@ -78,10 +80,17 @@ export default function PillButton({
             color={disabled ? "rgba(31,41,55,0.25)" : iconColor}
           />
         ))}
+      <View>
+        <AppText style={[styles.label, textStyle]} numberOfLines={1}>
+          {label}
+        </AppText>
 
-      <AppText style={[styles.label, textStyle]} numberOfLines={1}>
-        {label}
-      </AppText>
+        {subtitle && (
+          <AppText style={[styles.label, { fontSize: 12 }]} numberOfLines={1}>
+            {subtitle}
+          </AppText>
+        )}
+      </View>
 
       {RightIcon && (
         <RightIcon

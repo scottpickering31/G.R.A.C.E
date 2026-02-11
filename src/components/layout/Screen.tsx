@@ -1,20 +1,30 @@
 import { useHeaderHeight } from "@react-navigation/elements";
 import React from "react";
-import { ImageBackground, StyleSheet, View, ViewStyle } from "react-native";
+import {
+  ImageBackground,
+  ImageSourcePropType,
+  StyleSheet,
+  View,
+  ViewStyle,
+} from "react-native";
+
+interface Screenprops {
+  children: React.ReactNode;
+  contentStyle?: ViewStyle;
+  screenBackground?: ImageSourcePropType;
+}
 
 export default function Screen({
   children,
   contentStyle,
-}: {
-  children: React.ReactNode;
-  contentStyle?: ViewStyle;
-}) {
-  const headerHeight = useHeaderHeight(); // height of the current header
+  screenBackground,
+}: Screenprops) {
+  const headerHeight = useHeaderHeight();
 
   return (
     <View style={styles.root}>
       <ImageBackground
-        source={require("@/assets/images/clouds.png")}
+        source={screenBackground}
         style={styles.bg}
         resizeMode="cover"
       >

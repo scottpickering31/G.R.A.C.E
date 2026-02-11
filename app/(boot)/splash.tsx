@@ -1,8 +1,6 @@
-import Loading from "@/components/Loading";
 import AppText from "@/src/components/AppText";
 import { theme } from "@/src/theme";
 import { useAuthStore } from "@/state/auth.store";
-import { useUIStore } from "@/state/ui.store";
 import {
   NunitoSans_400Regular,
   NunitoSans_600SemiBold,
@@ -10,7 +8,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/nunito-sans";
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   Animated,
   Easing,
@@ -25,27 +23,17 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Splash() {
   const router = useRouter();
-  const { showLoading, hideLoading } = useUIStore();
-  const { width, height } = useWindowDimensions();
-
-  const [checkingSession, setCheckingSession] = useState(false);
-  const [introDone, setIntroDone] = useState(false);
-
+  const { width } = useWindowDimensions();
   const [fontsLoaded] = useFonts({
     NunitoSans_400Regular,
     NunitoSans_600SemiBold,
     NunitoSans_700Bold,
   });
 
-  useEffect(() => {
-    const t = setTimeout(() => setIntroDone(true), 2000);
-    return () => clearTimeout(t);
-  }, []);
+  const hydrated = useAuthStore((s) => s.hydrated);
+  const session = useAuthStore((s) => s.session);
 
-  const readyForContinue = useMemo(
-    () => introDone && fontsLoaded,
-    [introDone, fontsLoaded],
-  );
+  const readyForContinue = fontsLoaded && hydrated;
 
   // Button animation (fade + slight slide)
   const btnOpacity = useRef(new Animated.Value(0)).current;
@@ -54,7 +42,6 @@ export default function Splash() {
   useEffect(() => {
     if (!readyForContinue) return;
 
-    // reset (in case you ever come back to this screen)
     btnOpacity.setValue(0);
     btnTranslateY.setValue(8);
 
@@ -74,23 +61,12 @@ export default function Splash() {
     ]).start();
   }, [readyForContinue, btnOpacity, btnTranslateY]);
 
-  const handlePress = async () => {
-    setCheckingSession(true);
-    showLoading("Checking your session...");
+  const handlePress = () => {
+    if (!readyForContinue) return;
 
-    const start = Date.now();
-    while (!useAuthStore.getState().hydrated && Date.now() - start < 1200) {
-      await new Promise((r) => setTimeout(r, 50));
-    }
-
-    const { session } = useAuthStore.getState();
-    hideLoading();
-
-    if (session) router.replace("/(tabs)");
+    if (session) router.replace("/(auth)/post-login");
     else router.replace("/(auth)/signup");
   };
-
-  if (checkingSession) return <Loading />;
 
   const logoSize = Math.min(Math.max(width * 0.42, 600), 300);
 
@@ -122,7 +98,7 @@ export default function Splash() {
 
             {/* Fixed button slot */}
             <View style={styles.buttonSlot}>
-              {readyForContinue && (
+              {readyForContinue && fontsLoaded && (
                 <Animated.View
                   style={{
                     opacity: btnOpacity,

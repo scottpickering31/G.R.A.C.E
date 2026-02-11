@@ -1,6 +1,7 @@
 import { supabase } from "@/services/supabase";
 import type { Session } from "@supabase/supabase-js";
 import { create } from "zustand";
+import { queryClient } from "../lib/queryclient";
 
 type AuthState = {
   session: Session | null;
@@ -26,7 +27,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signOut: async () => {
     await supabase.auth.signOut();
-    set({ session: null });
+    queryClient.clear();
+    set({ session: null, hydrated: true });
   },
 }));
 
