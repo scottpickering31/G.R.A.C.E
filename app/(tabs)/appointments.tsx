@@ -14,7 +14,7 @@ import { StyleSheet, View } from "react-native";
 export default function Appointments() {
   const [date, setDate] = useState(new Date());
   return (
-    <Screen>
+    <Screen screenBackground={require("@/assets/images/clouds.png")}>
       <Section>
         <View style={styles.headerContainer}>
           <ProfileHeader style={{ width: "60%" }} />

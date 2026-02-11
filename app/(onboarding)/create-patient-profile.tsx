@@ -12,7 +12,7 @@ export default function CreatePatientProfile() {
 
   return (
     <View>
-      <Text>Create your first patient profile</Text>
+      <Text style={{ padding: 104 }}>Create your first patient profile</Text>
       <Pressable onPress={handleClick}>
         <AppText>Next</AppText>
       </Pressable>

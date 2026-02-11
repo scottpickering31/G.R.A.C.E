@@ -7,9 +7,8 @@ export function useSetOnboardingCompleted() {
 
   return useMutation({
     mutationFn: (userId: string) => setOnboardingCompleted(userId),
-    onSuccess: () => {
-      // refresh anything that depends on profile
-      qc.invalidateQueries({ queryKey: ["profile"] });
+    onSuccess: (_data, userId) => {
+      qc.invalidateQueries({ queryKey: ["onboarding-completed", userId] });
     },
   });
 }
@@ -19,5 +18,10 @@ export function useIsOnboardingCompleted(userId?: string) {
     queryKey: ["onboarding-completed", userId],
     queryFn: () => isOnboardingCompleted(userId!),
     enabled: !!userId,
+
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
   });
 }

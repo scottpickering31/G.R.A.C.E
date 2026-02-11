@@ -23,7 +23,7 @@ import { View } from "react-native";
 
 export default function Dashboard() {
   return (
-    <Screen>
+    <Screen screenBackground={require("@/assets/images/clouds.png")}>
       <Section>
         <View
           style={{

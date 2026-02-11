@@ -6,7 +6,7 @@ export default function Publisher() {
   useEffect(() => {
     const t = setTimeout(() => {
       router.replace("/(boot)/splash");
-    }, 1500);
+    }, 1000);
 
     return () => clearTimeout(t);
   }, []);
