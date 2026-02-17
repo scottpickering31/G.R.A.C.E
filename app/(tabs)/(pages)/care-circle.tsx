@@ -4,7 +4,7 @@ import AppText from "@/src/components/AppText";
 export default function CareCircle() {
   return (
     <Section>
-      <AppText>CareCircle</AppText>
+      <AppText>CareCircles</AppText>
     </Section>
   );
 }
