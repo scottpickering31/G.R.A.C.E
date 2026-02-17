@@ -8,11 +8,14 @@
     "scheme": "grace",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSUserNotificationUsageDescription": "G.R.A.C.E uses notifications for medication reminders and care updates.",
+        "NSPhotoLibraryUsageDescription": "G.R.A.C.E lets you attach photos/videos to logs and reports.",
+        "NSCameraUsageDescription": "G.R.A.C.E lets you record videos to share with clinicians."
+      }
     },
-
     "android": {
       "package": "com.yourname.grace",
       "adaptiveIcon": {
@@ -22,12 +25,10 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
-
     "web": {
       "output": "static",
       "favicon": "./assets/images/splash-logo.png"
     },
-
     "plugins": [
       "expo-router",
       [
@@ -45,10 +46,15 @@
       "expo-secure-store",
       "expo-font"
     ],
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "308d0a2d-5aed-4b94-9528-cdc76a143295"
+      }
     }
   }
 }

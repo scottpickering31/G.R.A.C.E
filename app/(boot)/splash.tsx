@@ -1,3 +1,4 @@
+import SplashAnimation from "@/src/animations/splash/SplashAnimation";
 import AppText from "@/src/components/AppText";
 import { theme } from "@/src/theme";
 import { useAuthStore } from "@/state/auth.store";
@@ -8,22 +9,22 @@ import {
   useFonts,
 } from "@expo-google-fonts/nunito-sans";
 import { useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
+import { useState } from "react";
 import {
-  Animated,
-  Easing,
   Image,
-  ImageBackground,
   Pressable,
   StyleSheet,
   View,
   useWindowDimensions,
 } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Splash() {
-  const router = useRouter();
+  const [bgFinished, setBgFinished] = useState(false);
   const { width } = useWindowDimensions();
+  const router = useRouter();
+
   const [fontsLoaded] = useFonts({
     NunitoSans_400Regular,
     NunitoSans_600SemiBold,
@@ -31,99 +32,64 @@ export default function Splash() {
   });
 
   const hydrated = useAuthStore((s) => s.hydrated);
-  const session = useAuthStore((s) => s.session);
-
   const readyForContinue = fontsLoaded && hydrated;
-
-  // Button animation (fade + slight slide)
-  const btnOpacity = useRef(new Animated.Value(0)).current;
-  const btnTranslateY = useRef(new Animated.Value(8)).current;
-
-  useEffect(() => {
-    if (!readyForContinue) return;
-
-    btnOpacity.setValue(0);
-    btnTranslateY.setValue(8);
-
-    Animated.parallel([
-      Animated.timing(btnOpacity, {
-        toValue: 1,
-        duration: 420,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(btnTranslateY, {
-        toValue: 0,
-        duration: 420,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [readyForContinue, btnOpacity, btnTranslateY]);
 
   const handlePress = () => {
     if (!readyForContinue) return;
-
-    if (session) router.replace("/(auth)/post-login");
-    else router.replace("/(auth)/signup");
+    router.replace("/(auth)/post-login");
   };
 
   const logoSize = Math.min(Math.max(width * 0.42, 600), 300);
 
   return (
-    <ImageBackground
-      source={require("../../assets/images/splash-background.png")}
-      style={styles.background}
-      resizeMode="cover"
-    >
+    <View style={styles.background}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          <View style={styles.hero}>
-            {/* Heart Logo */}
-            <Image
-              source={require("../../assets/images/splash-logo.png")}
-              style={{ width: logoSize, height: logoSize }}
-              resizeMode="contain"
-            />
+          <SplashAnimation onDone={() => setBgFinished(true)} />
 
-            {/* Title */}
-            <AppText weight="bold" style={styles.title}>
-              G.R.A.C.E
-            </AppText>
+          {/* keep mounted; just fade it in */}
+          {bgFinished && (
+            <Animated.View
+              pointerEvents={bgFinished ? "auto" : "none"}
+              style={[styles.hero]}
+              entering={FadeIn.duration(300)}
+              exiting={FadeOut}
+            >
+              <Image
+                source={require("../../assets/images/splash-logo.png")}
+                style={{ width: logoSize, height: logoSize }}
+                resizeMode="contain"
+              />
 
-            {/* Subtitle */}
-            <AppText style={styles.subtitle}>
-              Guided Response & Care Environment
-            </AppText>
+              <AppText weight="bold" style={styles.title}>
+                G.R.A.C.E
+              </AppText>
 
-            {/* Fixed button slot */}
-            <View style={styles.buttonSlot}>
-              {readyForContinue && fontsLoaded && (
-                <Animated.View
-                  style={{
-                    opacity: btnOpacity,
-                    transform: [{ translateY: btnTranslateY }],
-                  }}
-                >
+              <AppText style={styles.subtitle}>
+                Guided Response & Care Environment
+              </AppText>
+
+              <View style={styles.buttonSlot}>
+                {readyForContinue && (
                   <Pressable onPress={handlePress} style={styles.button}>
                     <AppText weight="semibold" style={styles.buttonText}>
                       Press to continue
                     </AppText>
                   </Pressable>
-                </Animated.View>
-              )}
-            </View>
-          </View>
+                )}
+              </View>
+            </Animated.View>
+          )}
         </View>
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   );
 }
 
 const BUTTON_HEIGHT = 52;
 
 const styles = StyleSheet.create({
-  background: { flex: 1 },
+  background: { flex: 1, backgroundColor: theme.colors.bg.info },
   safeArea: { flex: 1 },
 
   container: {
@@ -137,22 +103,24 @@ const styles = StyleSheet.create({
     width: "100%",
   },
 
-  logo: {
-    marginBottom: 18,
-  },
-
   title: {
     fontSize: theme.typography.fontSize["3xl"],
     letterSpacing: theme.typography.letterSpacing.brand,
     color: theme.colors.text.primary,
+    textShadowColor: "rgb(255, 255, 255)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
 
   subtitle: {
     marginTop: 10,
-    fontSize: theme.typography.fontSize.md,
+    fontSize: theme.typography.fontSize.lg,
     textAlign: "center",
     color: theme.colors.text.primary,
-    opacity: 0.85,
+    fontWeight: "600",
+    textShadowColor: "rgb(255, 255, 255)",
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 5,
   },
 
   buttonSlot: {

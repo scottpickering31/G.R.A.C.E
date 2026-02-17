@@ -3,32 +3,39 @@ import React from "react";
 import {
   ImageBackground,
   ImageSourcePropType,
+  StyleProp,
   StyleSheet,
   View,
   ViewStyle,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-interface Screenprops {
+type ScreenProps = {
   children: React.ReactNode;
-  contentStyle?: ViewStyle;
+  contentStyle?: StyleProp<ViewStyle>;
   screenBackground?: ImageSourcePropType;
-}
+  useSafeArea?: boolean;
+  rootStyle?: StyleProp<ViewStyle>;
+};
 
 export default function Screen({
   children,
   contentStyle,
   screenBackground,
-}: Screenprops) {
+  useSafeArea = false,
+  rootStyle,
+}: ScreenProps) {
   const headerHeight = useHeaderHeight();
 
+  const Root = useSafeArea ? SafeAreaView : View;
+
   return (
-    <View style={styles.root}>
+    <Root style={[styles.root, rootStyle]}>
       <ImageBackground
         source={screenBackground}
         style={styles.bg}
         resizeMode="cover"
       >
-        {/* optional fade/overlay */}
         <View style={styles.fade} />
 
         <View
@@ -41,7 +48,7 @@ export default function Screen({
           {children}
         </View>
       </ImageBackground>
-    </View>
+    </Root>
   );
 }
 

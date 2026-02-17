@@ -40,7 +40,7 @@ export default function Login() {
       alert(signInError.message);
       return;
     }
-    router.replace("/post-login");
+    router.replace("/(auth)/post-login");
   };
 
   if (submitting) return <Loading />;

@@ -7,7 +7,7 @@ import { Redirect, Tabs, useRouter } from "expo-router";
 
 export default function TabsLayout() {
   const router = useRouter();
-
+  // const insets = useSafeAreaInsets();
   const session = useAuthStore((s) => s.session);
   const hydrated = useAuthStore((s) => s.hydrated);
 

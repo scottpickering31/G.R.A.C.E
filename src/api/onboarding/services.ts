@@ -17,8 +17,13 @@ export async function isOnboardingCompleted(userId: string) {
     .from("profiles")
     .select("onboarding_completed_at")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
+  // Real errors should still throw
   if (error) throw error;
-  return !!data?.onboarding_completed_at;
+
+  // If the row doesn't exist yet -> treat as not completed
+  if (!data) return false;
+
+  return !!data.onboarding_completed_at;
 }

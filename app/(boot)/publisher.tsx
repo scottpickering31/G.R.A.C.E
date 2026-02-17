@@ -17,7 +17,7 @@ export default function Publisher() {
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#fff",
+        backgroundColor: "#f7fffe",
       }}
     >
       <Image

@@ -15,11 +15,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   hydrated: false,
 
   hydrate: async () => {
-    // 1) get existing session from storage
     const { data } = await supabase.auth.getSession();
-    set({ session: data.session ?? null, hydrated: true });
+    const session = data.session ?? null;
 
-    // 2) listen for changes (login/logout/token refresh)
+    // If we have a session locally, verify it on the server
+    if (session) {
+      const { data: userData, error } = await supabase.auth.getUser();
+
+      // Token invalid / user deleted / session stale
+      if (error || !userData?.user) {
+        await supabase.auth.signOut();
+        set({ session: null, hydrated: true });
+        return;
+      }
+    }
+
+    set({ session, hydrated: true });
+
     supabase.auth.onAuthStateChange((_event, session) => {
       set({ session: session ?? null, hydrated: true });
     });

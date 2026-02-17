@@ -20,7 +20,10 @@ import { View } from "react-native";
 
 export default function MedicationsTreatments() {
   return (
-    <Screen screenBackground={require("@/assets/images/clouds.png")}>
+    <Screen
+      screenBackground={require("@/assets/images/clouds.png")}
+      useSafeArea={false}
+    >
       <Section>
         <ProfileHeader />
         <Card padding="cardInset" borderActive={true} elevationActive={true}>
