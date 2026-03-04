@@ -1,4 +1,5 @@
 import { queryClient } from "@/src/lib/queryclient";
+import Toast from "@/src/components/Toast";
 import { useAuthStore } from "@/state/auth.store";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
@@ -16,8 +17,10 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <StatusBar style="dark" translucent backgroundColor="transparent" />
+        <Toast />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="callback" />
           <Stack.Screen name="(boot)" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />

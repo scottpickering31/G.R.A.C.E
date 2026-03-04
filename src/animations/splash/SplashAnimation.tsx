@@ -1,4 +1,4 @@
-import Layer from "@/animations/splash/layer";
+import Layer from "@/animations/splash/Layer";
 import React from "react";
 import { StyleSheet, useWindowDimensions, View } from "react-native";
 

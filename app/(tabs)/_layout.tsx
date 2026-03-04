@@ -11,10 +11,8 @@ export default function TabsLayout() {
   const session = useAuthStore((s) => s.session);
   const hydrated = useAuthStore((s) => s.hydrated);
 
-  console.log("TABS layout:", { hydrated, hasSession: !!session });
-
   if (!hydrated) return <Loading />;
-  if (!session) return <Redirect href="/(auth)/login" />;
+  if (!session) return <Redirect href="/(auth)/post-login" />;
 
   return (
     <Tabs

@@ -21,15 +21,6 @@ export default function PostLoginGate() {
     refetch,
   } = useIsOnboardingCompleted(userId);
 
-  console.log("POSTLOGIN", {
-    hydrated,
-    hasSession: !!session,
-    userId: session?.user?.id,
-    completed,
-    isLoading,
-    isError,
-  });
-
   useEffect(() => {
     if (!hydrated) return;
 

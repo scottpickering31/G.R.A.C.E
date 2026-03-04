@@ -1,6 +1,6 @@
 import { LinearGradientStyle } from "@/src/components/layout/LinearGradientContainer";
 import { GradientProps } from "@/src/types/gradient.types";
-import { PillButtonProps } from "@/src/types/pillbutton.types";
+import { PillButtonProps } from "@/src/types/pill-button.types";
 import { cardStyles } from "@/styles/shared-styles";
 import React from "react";
 import { Platform, Pressable, StyleSheet, View, ViewStyle } from "react-native";

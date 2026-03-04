@@ -1,15 +1,33 @@
 import { supabase } from "@/services/supabase";
 
 export async function setOnboardingCompleted(userId: string) {
+  const onboardingCompletedAt = new Date().toISOString();
+
   const { data, error } = await supabase
     .from("profiles")
-    .update({ onboarding_completed_at: new Date().toISOString() })
+    .update({ onboarding_completed_at: onboardingCompletedAt })
     .eq("id", userId)
-    .select("onboarding_completed_at")
+    .select("id, onboarding_completed_at")
     .single();
 
-  if (error) throw error;
-  return data;
+  if (!error) return data;
+  if (error.code !== "PGRST116") throw error;
+
+  // Fallback for brand new users when no profile row exists yet.
+  const { data: upsertedData, error: upsertError } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: userId,
+        onboarding_completed_at: onboardingCompletedAt,
+      },
+      { onConflict: "id" },
+    )
+    .select("id, onboarding_completed_at")
+    .single();
+
+  if (upsertError) throw upsertError;
+  return upsertedData;
 }
 
 export async function isOnboardingCompleted(userId: string) {
