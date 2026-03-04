@@ -1,151 +1,201 @@
-import { useRouter } from "expo-router";
-import { Calendar, Camera, CircleCheck, User } from "lucide-react-native";
-import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
-
+import { supabase } from "@/services/supabase";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
 import { GradientText } from "@/src/components/layout/LinearGradientText";
 import Screen from "@/src/components/layout/Screen";
 import { theme } from "@/src/theme";
+import { useAuthStore } from "@/state/auth.store";
+import { useUIStore } from "@/state/ui.store";
+import { useRouter } from "expo-router";
+import { Calendar, CircleCheck, User } from "lucide-react-native";
+import React, { useMemo, useState } from "react";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
-type Gender = "Female" | "Male" | "Other" | "Prefer not to say";
+type SexOption = "female" | "male" | "other" | "prefer_not_to_say";
+
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 export default function CreatePatientProfile() {
   const router = useRouter();
+  const userId = useAuthStore((s) => s.session?.user.id);
+  const { showLoading, hideLoading, showToast } = useUIStore();
 
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
-  const [gender, setGender] = useState<Gender | null>(null);
-  const [diagnosis, setDiagnosis] = useState("");
+  const [sex, setSex] = useState<SexOption | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const canContinue = useMemo(() => name.trim().length > 0, [name]);
+  const canContinue = useMemo(
+    () => name.trim().length > 0 && !!userId && !saving,
+    [name, userId, saving],
+  );
+
+  const createOwnedPatient = async () => {
+    if (!userId) {
+      showToast("Please sign in again to continue.", "error");
+      router.replace("/(auth)/signup");
+      return;
+    }
+
+    const displayName = name.trim();
+    if (!displayName) {
+      showToast("Please add a patient name.", "error");
+      return;
+    }
+
+    const normalizedDob = dob.trim();
+    let dobValue: string | null = null;
+    if (normalizedDob) {
+      if (!ISO_DATE_REGEX.test(normalizedDob)) {
+        showToast("Date of birth must use YYYY-MM-DD format.", "error");
+        return;
+      }
+      const parsed = new Date(`${normalizedDob}T00:00:00Z`);
+      const isValidDate =
+        !Number.isNaN(parsed.getTime()) &&
+        parsed.toISOString().slice(0, 10) === normalizedDob;
+      if (!isValidDate) {
+        showToast("Please enter a valid calendar date.", "error");
+        return;
+      }
+      dobValue = normalizedDob;
+    }
+
+    const sexValue = sex === "prefer_not_to_say" ? null : sex;
+
+    try {
+      setSaving(true);
+      showLoading("Creating patient profile...");
+
+      const { data: patient, error: patientError } = await supabase
+        .from("patients")
+        .insert({
+          created_by: userId,
+          display_name: displayName,
+          dob: dobValue,
+          sex: sexValue,
+        })
+        .select("id")
+        .single();
+
+      if (patientError) throw patientError;
+
+      const { error: memberError } = await supabase.from("patient_members").insert({
+        patient_id: patient.id,
+        user_id: userId,
+        role: "owner",
+      });
+
+      if (memberError) throw memberError;
+
+      showToast("Patient profile created.", "success");
+      router.push("/(onboarding)/permissions");
+    } catch (e: any) {
+      showToast(e?.message ?? "Could not create patient profile.", "error");
+    } finally {
+      hideLoading();
+      setSaving(false);
+    }
+  };
 
   return (
     <Screen
       useSafeArea={true}
       screenBackground={require("@/assets/images/welcome-dreamscape.png")}
-      contentStyle={{ paddingHorizontal: 15, paddingTop: 18, gap: 14 }}
+      contentStyle={styles.screenContent}
     >
-      {/* Title */}
-      <View style={{ alignItems: "center", paddingHorizontal: 6 }}>
-        <GradientText
-          colors={["#63D6C5", "#8A76FF"]}
-          style={{ fontSize: theme.typography.fontSize["2xl"] }}
-        >
-          Create a Patient Profile
+      <View style={styles.header}>
+        <GradientText colors={["#63D6C5", "#8A76FF"]} style={styles.title}>
+          Create Patient Profile
         </GradientText>
         <AppText style={styles.subtitle}>
-          Add just the basics now — you can fill in details later.
+          Start with key details. You can edit and add more later.
         </AppText>
       </View>
 
-      {/* Main glass card */}
-      <View style={styles.glassCard}>
-        {/* Photo row */}
-        <View style={styles.photoRow}>
-          <View style={styles.photoCircle}>
-            <User size={26} color="rgba(117, 24, 173, 0.85)" />
+      <View style={styles.card}>
+        <View style={styles.profileRow}>
+          <View style={styles.avatar}>
+            <User size={22} color="#4A90E2" />
           </View>
-
-          <View style={{ flex: 1, gap: 2 }}>
-            <AppText style={styles.sectionTitle}>
-              Patient photo (optional)
+          <View style={{ flex: 1 }}>
+            <AppText weight="semibold" style={styles.sectionTitle}>
+              Primary patient details
             </AppText>
             <AppText style={styles.sectionHint}>
-              Helps caregivers quickly pick the right profile.
+              This profile is linked to your account as owner.
             </AppText>
           </View>
-
-          <Pressable style={styles.photoButton} onPress={() => {}}>
-            <Camera size={18} color="rgba(117, 24, 173, 0.9)" />
-            <AppText style={styles.photoButtonText}>Add</AppText>
-          </Pressable>
         </View>
 
-        <View style={styles.divider} />
-
-        {/* Inputs */}
         <Field
           label="Patient name *"
-          placeholder="e.g. Katie"
+          placeholder="e.g. Katie Smith"
           value={name}
           onChangeText={setName}
         />
 
         <Field
           label="Date of birth (optional)"
-          placeholder="DD / MM / YYYY"
+          placeholder="YYYY-MM-DD"
           value={dob}
           onChangeText={setDob}
-          rightIcon={<Calendar size={18} color="rgba(31,41,55,0.55)" />}
+          rightIcon={<Calendar size={18} color="rgba(31,45,61,0.55)" />}
         />
 
-        <AppText style={styles.fieldLabel}>Gender (optional)</AppText>
+        <AppText weight="semibold" style={styles.fieldLabel}>
+          Sex (optional)
+        </AppText>
         <View style={styles.chipsRow}>
-          {(["Female", "Male", "Other", "Prefer not to say"] as Gender[]).map(
-            (g) => {
-              const active = gender === g;
-              return (
-                <Pressable
-                  key={g}
-                  onPress={() => setGender(g)}
-                  style={[styles.chip, active && styles.chipActive]}
-                >
-                  <AppText
-                    style={[styles.chipText, active && styles.chipTextActive]}
-                  >
-                    {g}
-                  </AppText>
-                </Pressable>
-              );
-            },
-          )}
+          {([
+            ["female", "Female"],
+            ["male", "Male"],
+            ["other", "Other"],
+            ["prefer_not_to_say", "Prefer not to say"],
+          ] as [SexOption, string][]).map(([value, label]) => {
+            const active = sex === value;
+            return (
+              <Pressable
+                key={value}
+                onPress={() => setSex(value)}
+                style={[styles.chip, active && styles.chipActive]}
+              >
+                <AppText style={[styles.chipText, active && styles.chipTextActive]}>
+                  {label}
+                </AppText>
+              </Pressable>
+            );
+          })}
         </View>
-
-        <Field
-          label="Diagnosis / condition (optional)"
-          placeholder="e.g. Epilepsy, SYNGAP1, etc."
-          value={diagnosis}
-          onChangeText={setDiagnosis}
-        />
       </View>
 
-      {/* CTA */}
-      <View style={{ marginTop: 6, gap: 10 }}>
+      <View style={styles.ctaBlock}>
         <PillButton
-          label={canContinue ? "Continue" : "Enter a name to continue"}
-          onPress={() => {
-            if (!canContinue) return;
-
-            // TODO: Save to DB
-            // - create patient row
-            // - create membership row
-            router.push("/(onboarding)/permissions");
-          }}
+          label={saving ? "Creating..." : canContinue ? "Create & Continue" : "Enter a name to continue"}
+          onPress={createOwnedPatient}
+          disabled={!canContinue}
           gradientColors={["#27D6C5", "#7C6CFF"]}
           borderActive={false}
-          elevationActive={true}
-          textStyle={{
-            color: "white",
-            fontWeight: "800",
-            fontSize: 18,
-          }}
+          textStyle={styles.primaryCtaText}
           textContainerStyle={{ alignItems: "center" }}
-          style={{
-            minHeight: 58,
-            paddingVertical: 16,
-            opacity: canContinue ? 1 : 0.6,
-          }}
+          style={styles.primaryCta}
         />
 
-        <View style={{ alignItems: "center" }}>
-          <View style={styles.trustRow}>
-            <CircleCheck size={16} color="rgba(31,41,55,0.55)" />
-            <AppText style={styles.trustText}>
-              You can edit this anytime from Patient Profiles.
-            </AppText>
-          </View>
+        <PillButton
+          label="Connect to an existing patient profile"
+          onPress={() => showToast("Caregiver connect flow coming next.", "info")}
+          borderActive={true}
+          elevationActive={false}
+          textStyle={styles.secondaryCtaText}
+          textContainerStyle={{ alignItems: "center" }}
+          style={styles.secondaryCta}
+        />
+
+        <View style={styles.trustRow}>
+          <CircleCheck size={16} color="rgba(31,45,61,0.55)" />
+          <AppText style={styles.trustText}>
+            You can update patient details later from Profiles.
+          </AppText>
         </View>
       </View>
     </Screen>
@@ -166,215 +216,160 @@ function Field({
   rightIcon?: React.ReactNode;
 }) {
   return (
-    <View style={{ gap: 3 }}>
-      <AppText style={styles.fieldLabel}>{label}</AppText>
-
+    <View style={styles.field}>
+      <AppText weight="semibold" style={styles.fieldLabel}>
+        {label}
+      </AppText>
       <View style={styles.inputWrap}>
         <TextInput
-          placeholder={placeholder}
-          placeholderTextColor="rgba(31,41,55,0.35)"
           value={value}
           onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor="rgba(31,45,61,0.4)"
           style={styles.input}
         />
-        {rightIcon ? <View style={{ marginLeft: 8 }}>{rightIcon}</View> : null}
+        {rightIcon ? <View style={styles.inputIcon}>{rightIcon}</View> : null}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  topRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  screenContent: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    gap: 14,
+  },
+  header: {
     alignItems: "center",
+    paddingHorizontal: 6,
   },
-
-  iconPill: {
-    width: 44,
-    height: 44,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.65)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.7)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  skipPill: {
-    paddingHorizontal: 18,
-    height: 44,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.65)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.7)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  skipText: {
-    color: "rgba(31,41,55,0.7)",
-    fontWeight: "700",
-  },
-
   title: {
-    fontSize: theme.typography.fontSize["xl"],
-    fontWeight: "900",
-    color: "#243B45",
+    fontSize: theme.typography.fontSize["2xl"],
     textAlign: "center",
   },
-
   subtitle: {
     marginTop: 6,
-    fontSize: theme.typography.fontSize.md,
-    fontWeight: "600",
-    color: "rgba(36,59,69,0.75)",
     textAlign: "center",
-    lineHeight: 22,
+    fontSize: theme.typography.fontSize.md,
+    color: "rgba(31,45,61,0.78)",
   },
-
-  heroImage: {
-    width: "100%",
-    height: 210,
-    marginTop: 6,
-    opacity: 0.95,
-  },
-
-  glassCard: {
-    borderRadius: 26,
+  card: {
+    borderRadius: 24,
     padding: 16,
-    backgroundColor: "rgba(255, 232, 255, 0.85)",
+    gap: 10,
+    backgroundColor: "rgba(255,255,255,0.9)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.65)",
+    borderColor: "rgba(255,255,255,0.92)",
     shadowColor: "#000",
     shadowOpacity: 0.08,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 12 },
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
     elevation: 4,
   },
-
-  photoRow: {
+  profileRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
+    marginBottom: 4,
   },
-
-  photoCircle: {
-    width: 46,
-    height: 46,
+  avatar: {
+    width: 42,
+    height: 42,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.7)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.75)",
     alignItems: "center",
     justifyContent: "center",
-  },
-
-  photoButton: {
-    flexDirection: "row",
-    gap: 6,
-    alignItems: "center",
-    paddingHorizontal: 12,
-    height: 36,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.7)",
+    backgroundColor: "rgba(74, 144, 226, 0.14)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.75)",
+    borderColor: "rgba(74,144,226,0.25)",
   },
-
-  photoButtonText: {
-    fontWeight: "800",
-    color: "rgba(117, 24, 173, 0.9)",
-  },
-
   sectionTitle: {
-    fontWeight: "800",
-    color: "#243B45",
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.md,
   },
-
   sectionHint: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "rgba(36,59,69,0.7)",
+    marginTop: 2,
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.sm,
   },
-
-  divider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.65)",
-    marginTop: 14,
-  },
-
+  field: { gap: 6 },
   fieldLabel: {
-    marginTop: 10,
-    fontWeight: "800",
-    color: "#243B45",
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.sm,
   },
-
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(143, 162, 180, 0.35)",
+    backgroundColor: "rgba(255,255,255,0.95)",
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: "rgba(255,255,255,0.7)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.85)",
   },
-
   input: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#243B45",
-    paddingVertical: 2,
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.md,
   },
-
+  inputIcon: {
+    marginLeft: 8,
+  },
   chipsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    marginTop: 6,
+    gap: 8,
+    marginTop: 2,
   },
-
   chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    backgroundColor: "rgba(255,255,255,0.95)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.75)",
+    borderColor: "rgba(143, 162, 180, 0.35)",
   },
-
   chipActive: {
-    backgroundColor: "rgba(124, 108, 255, 0.18)",
-    borderColor: "rgba(124, 108, 255, 0.35)",
+    backgroundColor: "rgba(124,108,255,0.18)",
+    borderColor: "rgba(124,108,255,0.42)",
   },
-
   chipText: {
-    fontWeight: "800",
-    color: "rgba(36,59,69,0.8)",
-    fontSize: 13,
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: "700",
   },
-
   chipTextActive: {
-    color: "rgba(90, 60, 210, 0.95)",
+    color: "#5A3CD2",
   },
-
+  ctaBlock: {
+    gap: 10,
+    marginTop: 4,
+  },
+  primaryCta: {
+    minHeight: 56,
+  },
+  primaryCtaText: {
+    color: "white",
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: "800",
+  },
+  secondaryCta: {
+    minHeight: 52,
+  },
+  secondaryCtaText: {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: "700",
+  },
   trustRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.55)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.65)",
+    paddingVertical: 8,
   },
-
   trustText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "rgba(31,41,55,0.6)",
+    color: "rgba(31,45,61,0.65)",
+    fontSize: theme.typography.fontSize.sm,
   },
 });

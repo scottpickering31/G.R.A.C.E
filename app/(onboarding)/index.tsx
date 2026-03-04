@@ -6,7 +6,7 @@ import { theme } from "@/src/theme";
 import { useRouter } from "expo-router";
 import { FileText, HeartPulse, ShieldCheck } from "lucide-react-native";
 import React from "react";
-import { Image, Pressable, View } from "react-native";
+import { Image, View } from "react-native";
 
 export default function Welcome() {
   const router = useRouter();
@@ -119,21 +119,6 @@ export default function Welcome() {
           style={{ minHeight: 56, paddingVertical: 16 }}
           textContainerStyle={{ alignItems: "center" }}
         />
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "center",
-            gap: 5,
-            marginTop: 10,
-          }}
-        >
-          <AppText>Already have an account? </AppText>
-          <Pressable onPress={() => router.push("/(auth)/login")}>
-            <AppText style={{ color: "#8A76FF", fontWeight: "600" }}>
-              Login
-            </AppText>
-          </Pressable>
-        </View>
       </View>
     </Screen>
   );

@@ -1,68 +1,115 @@
-import Loading from "@/components/Loading";
 import { supabase } from "@/services/supabase";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
 import { GradientText } from "@/src/components/layout/LinearGradientText";
 import Screen from "@/src/components/layout/Screen";
 import { theme } from "@/src/theme";
-import { authSchema, type AuthForm } from "@/state/auth.schema";
 import { useUIStore } from "@/state/ui.store";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Ionicons } from "@expo/vector-icons";
+import type { Provider } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
-import { useForm } from "react-hook-form";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
-export default function Signup() {
+WebBrowser.maybeCompleteAuthSession();
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function extractAuthParams(url: string) {
+  const [beforeHash, hashPart = ""] = url.split("#");
+  const queryPart = beforeHash.split("?")[1] ?? "";
+  const merged = [queryPart, hashPart].filter(Boolean).join("&");
+  return new URLSearchParams(merged);
+}
+
+export default function AuthEntry() {
   const router = useRouter();
   const { showLoading, hideLoading, showToast } = useUIStore();
-  const [submitting, setSubmitting] = useState(false);
+  const [email, setEmail] = useState("");
 
-  const {
-    register,
-    setValue,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<AuthForm>({
-    resolver: zodResolver(authSchema),
-    defaultValues: { email: "", password: "" },
-  });
+  const sendCode = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      showToast("Enter a valid email address first.", "error");
+      return;
+    }
 
-  const onSubmit = async (values: AuthForm) => {
-    setSubmitting(true);
-    showLoading("Creating your account...");
-
-    const { data, error } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
+    showLoading("Sending your verification code...");
+    const { error } = await supabase.auth.signInWithOtp({
+      email: normalizedEmail,
       options: {
+        shouldCreateUser: true,
         emailRedirectTo: Linking.createURL("callback"),
       },
     });
-
     hideLoading();
-    setSubmitting(false);
 
     if (error) {
       showToast(error.message, "error");
       return;
     }
 
-    // Email confirmation enabled: no active session until user verifies.
-    if (!data.session) {
-      showToast(
-        "Check your email for a verification link. Open it on this device to continue setup.",
-        "success",
-      );
-      router.replace("/(auth)/login");
-      return;
-    }
-
-    router.replace("/(auth)/post-login");
+    showToast("We sent a 6-digit code to your email.", "success");
+    router.push({
+      pathname: "/(auth)/verify-code",
+      params: { email: normalizedEmail },
+    });
   };
 
-  if (submitting) return <Loading />;
+  const startOAuth = async (provider: Provider) => {
+    try {
+      showLoading(`Opening ${provider === "apple" ? "Apple" : "Google"}...`);
+      const redirectTo = Linking.createURL("callback");
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.url) throw new Error("No OAuth URL returned.");
+
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectTo,
+      );
+      if (result.type !== "success" || !result.url) {
+        hideLoading();
+        showToast("Sign-in was canceled.", "info");
+        return;
+      }
+
+      const params = extractAuthParams(result.url);
+      const code = params.get("code");
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+
+      if (code) {
+        const { error: exchangeError } =
+          await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) throw exchangeError;
+      } else if (accessToken && refreshToken) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (sessionError) throw sessionError;
+      } else {
+        throw new Error("Could not complete OAuth session.");
+      }
+
+      hideLoading();
+      router.replace("/(auth)/post-login");
+    } catch (e: any) {
+      hideLoading();
+      showToast(e?.message ?? "OAuth sign-in failed.", "error");
+    }
+  };
 
   return (
     <Screen
@@ -71,14 +118,11 @@ export default function Signup() {
       contentStyle={styles.screenContent}
     >
       <View style={styles.header}>
-        <GradientText
-          colors={["#63D6C5", "#8A76FF"]}
-          style={styles.title}
-        >
-          Create Account
+        <GradientText colors={["#63D6C5", "#8A76FF"]} style={styles.title}>
+          Continue to G.R.A.C.E
         </GradientText>
         <AppText style={styles.subtitle}>
-          Start your setup and build your care profile in minutes.
+          One secure page for sign up and login.
         </AppText>
       </View>
 
@@ -88,49 +132,52 @@ export default function Signup() {
             Email
           </AppText>
           <TextInput
+            value={email}
+            onChangeText={setEmail}
             placeholder="you@example.com"
             placeholderTextColor="rgba(31,45,61,0.45)"
             autoCapitalize="none"
             keyboardType="email-address"
             style={styles.input}
-            onChangeText={(t) => setValue("email", t, { shouldValidate: true })}
-            {...register("email")}
           />
-          {errors.email ? (
-            <AppText style={styles.errorText}>{errors.email.message}</AppText>
-          ) : null}
-        </View>
-
-        <View style={styles.field}>
-          <AppText weight="semibold" style={styles.label}>
-            Password
+          <AppText style={styles.helperText}>
+            We’ll send a 6-digit code to verify your email.
           </AppText>
-          <TextInput
-            placeholder="At least 8 characters"
-            placeholderTextColor="rgba(31,45,61,0.45)"
-            secureTextEntry
-            style={styles.input}
-            onChangeText={(t) => setValue("password", t, { shouldValidate: true })}
-            {...register("password")}
-          />
-          {errors.password ? (
-            <AppText style={styles.errorText}>{errors.password.message}</AppText>
-          ) : null}
         </View>
 
         <PillButton
-          label="Sign up"
-          onPress={handleSubmit(onSubmit)}
+          label="Continue with Email Code"
+          onPress={sendCode}
           gradientColors={["#63D6C5", "#8A76FF"]}
           borderActive={false}
-          textStyle={styles.submitText}
+          textStyle={styles.primaryButtonText}
           textContainerStyle={{ alignItems: "center" }}
-          style={styles.submitButton}
+          style={styles.primaryButton}
         />
 
-        <Pressable onPress={() => router.push("/(auth)/login")} style={styles.switchCta}>
-          <AppText style={styles.switchText}>
-            Already created an account? <AppText weight="semibold">Login</AppText>
+        <View style={styles.dividerRow}>
+          <View style={styles.divider} />
+          <AppText style={styles.dividerText}>or</AppText>
+          <View style={styles.divider} />
+        </View>
+
+        <Pressable
+          onPress={() => startOAuth("apple")}
+          style={styles.oauthButton}
+        >
+          <Ionicons name="logo-apple" size={20} color="#1F2D3D" />
+          <AppText weight="semibold" style={styles.oauthText}>
+            Continue with Apple
+          </AppText>
+        </Pressable>
+
+        <Pressable
+          onPress={() => startOAuth("google")}
+          style={styles.oauthButton}
+        >
+          <Ionicons name="logo-google" size={20} color="#1F2D3D" />
+          <AppText weight="semibold" style={styles.oauthText}>
+            Continue with Google
           </AppText>
         </Pressable>
       </View>
@@ -159,10 +206,10 @@ const styles = StyleSheet.create({
     color: "rgba(31,45,61,0.75)",
   },
   card: {
-    backgroundColor: "rgba(255,255,255,0.88)",
+    backgroundColor: "rgba(255,255,255,0.9)",
     borderRadius: 24,
     padding: 16,
-    gap: 14,
+    gap: 12,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.9)",
     shadowColor: "#000",
@@ -186,25 +233,48 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.md,
     color: theme.colors.text.primary,
   },
-  errorText: {
-    color: "#C33E68",
+  helperText: {
     fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
   },
-  submitButton: {
+  primaryButton: {
     minHeight: 54,
     marginTop: 4,
   },
-  submitText: {
+  primaryButtonText: {
     color: "white",
     fontWeight: "800",
     fontSize: theme.typography.fontSize.md,
   },
-  switchCta: {
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     marginTop: 2,
-    paddingVertical: 6,
   },
-  switchText: {
-    textAlign: "center",
-    color: theme.colors.text.secondary,
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: theme.colors.ui.divider,
+  },
+  dividerText: {
+    color: theme.colors.text.muted,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  oauthButton: {
+    minHeight: 52,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.12)",
+    backgroundColor: "rgba(255,255,255,0.96)",
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  oauthText: {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.md,
   },
 });
