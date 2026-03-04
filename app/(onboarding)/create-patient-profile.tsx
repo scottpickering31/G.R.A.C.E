@@ -86,7 +86,8 @@ export default function CreatePatientProfile() {
         role: "owner",
       });
 
-      if (memberError) throw memberError;
+      // If membership was auto-created by DB logic, treat duplicate key as success.
+      if (memberError && memberError.code !== "23505") throw memberError;
 
       showToast("Patient profile created.", "success");
       router.push("/(onboarding)/permissions");
