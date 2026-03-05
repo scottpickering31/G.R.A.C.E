@@ -73,8 +73,14 @@ export type Database = {
           dose: string | null;
           id: string;
           instructions: string | null;
+          low_stock_threshold: number | null;
           name: string;
+          one_off_due_at: string | null;
           patient_id: string;
+          route: Database["public"]["Enums"]["medication_route"];
+          schedule_type: Database["public"]["Enums"]["medication_schedule_type"];
+          stock_quantity: number | null;
+          stock_unit: string | null;
           updated_at: string;
         };
         Insert: {
@@ -84,8 +90,14 @@ export type Database = {
           dose?: string | null;
           id?: string;
           instructions?: string | null;
+          low_stock_threshold?: number | null;
           name: string;
+          one_off_due_at?: string | null;
           patient_id: string;
+          route?: Database["public"]["Enums"]["medication_route"];
+          schedule_type?: Database["public"]["Enums"]["medication_schedule_type"];
+          stock_quantity?: number | null;
+          stock_unit?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -95,8 +107,14 @@ export type Database = {
           dose?: string | null;
           id?: string;
           instructions?: string | null;
+          low_stock_threshold?: number | null;
           name?: string;
+          one_off_due_at?: string | null;
           patient_id?: string;
+          route?: Database["public"]["Enums"]["medication_route"];
+          schedule_type?: Database["public"]["Enums"]["medication_schedule_type"];
+          stock_quantity?: number | null;
+          stock_unit?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -105,6 +123,35 @@ export type Database = {
             columns: ["patient_id"];
             isOneToOne: false;
             referencedRelation: "patients";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      medication_schedule_times: {
+        Row: {
+          created_at: string;
+          id: string;
+          medication_id: string;
+          time_of_day: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          medication_id: string;
+          time_of_day: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          medication_id?: string;
+          time_of_day?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "medication_schedule_times_medication_id_fkey";
+            columns: ["medication_id"];
+            isOneToOne: false;
+            referencedRelation: "medications";
             referencedColumns: ["id"];
           },
         ];
@@ -210,6 +257,26 @@ export type Database = {
     };
     Enums: {
       medication_dose_status: "pending" | "taken" | "skipped" | "missed";
+      medication_route:
+        | "oral"
+        | "sublingual"
+        | "buccal"
+        | "enteral_tube"
+        | "rectal"
+        | "vaginal"
+        | "topical"
+        | "transdermal"
+        | "inhalation"
+        | "nebulized"
+        | "intranasal"
+        | "ophthalmic"
+        | "otic"
+        | "subcutaneous"
+        | "intramuscular"
+        | "intravenous"
+        | "intradermal"
+        | "other";
+      medication_schedule_type: "as_needed" | "daily_same_time" | "one_off";
       patient_role: "owner" | "caregiver" | "clinician" | "read_only";
     };
     CompositeTypes: {
@@ -342,6 +409,27 @@ export const Constants = {
   public: {
     Enums: {
       medication_dose_status: ["pending", "taken", "skipped", "missed"],
+      medication_route: [
+        "oral",
+        "sublingual",
+        "buccal",
+        "enteral_tube",
+        "rectal",
+        "vaginal",
+        "topical",
+        "transdermal",
+        "inhalation",
+        "nebulized",
+        "intranasal",
+        "ophthalmic",
+        "otic",
+        "subcutaneous",
+        "intramuscular",
+        "intravenous",
+        "intradermal",
+        "other",
+      ],
+      medication_schedule_type: ["as_needed", "daily_same_time", "one_off"],
       patient_role: ["owner", "caregiver", "clinician", "read_only"],
     },
   },

@@ -37,11 +37,67 @@ begin
   values (v_patient_id, OWNER_USER_ID, 'owner')
   on conflict (patient_id, user_id) do nothing;
 
-  insert into public.medications (patient_id, created_by, name, dose, instructions)
+  insert into public.medications (
+    patient_id,
+    created_by,
+    name,
+    dose,
+    route,
+    instructions,
+    schedule_type,
+    one_off_due_at,
+    stock_quantity,
+    stock_unit,
+    low_stock_threshold
+  )
   values
-    (v_patient_id, OWNER_USER_ID, 'Levetiracetam', '500mg oral', 'Take with food'),
-    (v_patient_id, OWNER_USER_ID, 'Vitamin D3', '1000 IU oral', 'Morning dose'),
-    (v_patient_id, OWNER_USER_ID, 'Ibuprofen', '200mg oral', 'As needed for pain');
+    (
+      v_patient_id,
+      OWNER_USER_ID,
+      'Levetiracetam',
+      '500mg oral',
+      'oral',
+      'Take with food',
+      'daily_same_time',
+      null,
+      28,
+      'tablets',
+      7
+    ),
+    (
+      v_patient_id,
+      OWNER_USER_ID,
+      'Vitamin D3',
+      '1000 IU oral',
+      'oral',
+      'Morning dose',
+      'daily_same_time',
+      null,
+      45,
+      'capsules',
+      10
+    ),
+    (
+      v_patient_id,
+      OWNER_USER_ID,
+      'Ibuprofen',
+      '200mg oral',
+      'oral',
+      'As needed for pain',
+      'as_needed',
+      null,
+      12,
+      'tablets',
+      4
+    );
+
+  -- Multiple daily times for scheduled medications.
+  insert into public.medication_schedule_times (medication_id, time_of_day)
+  values
+    (v_med_1, '07:00'),
+    (v_med_1, '19:00'),
+    (v_med_2, '09:00')
+  on conflict do nothing;
 
   -- Fetch IDs for the seeded meds.
   select m.id
