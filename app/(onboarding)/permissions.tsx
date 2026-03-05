@@ -2,9 +2,9 @@
 import { useSetOnboardingCompleted } from "@/src/api/onboarding/hooks";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
-import { useMediaPermission } from "@/src/permissions/useMediaPermission";
 import { useNotificationsPermission } from "@/src/permissions/useNotificationsPermission";
 import { useAuthStore } from "@/src/state/auth.store";
+import { useUIStore } from "@/src/state/ui.store";
 import { PermissionState } from "@/src/types/notifications";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
@@ -36,21 +36,34 @@ function StatusPill({ status }: { status: PermissionState }) {
 export default function Permissions() {
   const router = useRouter();
   const userId = useAuthStore((s) => s.session?.user.id);
+  const { showToast } = useUIStore();
 
   const notif = useNotificationsPermission();
-  const media = useMediaPermission();
 
   const { mutate, isPending } = useSetOnboardingCompleted();
 
   const requestOrSettings = async (
-    requestFn: () => Promise<any>,
+    requestFn: () => Promise<PermissionState>,
     status: string,
   ) => {
     if (status === "denied") {
       Linking.openSettings();
+      showToast("Open app settings to re-enable notifications.", "info");
       return;
     }
-    await requestFn();
+    const nextStatus = await requestFn();
+    if (nextStatus === "granted") {
+      showToast("Notifications enabled.", "success");
+      return;
+    }
+    if (nextStatus === "denied") {
+      showToast(
+        "Notifications are currently disabled. You can enable them later in settings.",
+        "info",
+      );
+      return;
+    }
+    showToast("Notification permission not changed.", "info");
   };
 
   const finish = () => {
@@ -58,6 +71,8 @@ export default function Permissions() {
 
     mutate(userId, {
       onSuccess: () => router.replace("/(auth)/post-login"),
+      onError: (error: any) =>
+        showToast(error?.message ?? "Could not finish onboarding.", "error"),
     });
   };
 
@@ -101,39 +116,19 @@ export default function Permissions() {
           textStyle={{ color: "white", fontWeight: "900" }}
           textContainerStyle={{ alignItems: "center" }}
           style={{ minHeight: 52 }}
+          disabled={notif.loading}
         />
       </View>
 
-      {/* Media */}
+      {/* Deferred permissions note */}
       <View style={{ gap: 8, marginTop: 8 }}>
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <AppText style={{ fontSize: 18, fontWeight: "800" }}>
-            Photos & Videos
-          </AppText>
-          <StatusPill status={media.status} />
-        </View>
-
-        <AppText style={{ opacity: 0.8 }}>
-          Attach media to logs to share clear information with clinicians.
+        <AppText style={{ fontSize: 18, fontWeight: "800" }}>
+          Photos & Videos
         </AppText>
-
-        <PillButton
-          label={
-            media.status === "denied" ? "Open Settings" : "Enable Media Access"
-          }
-          onPress={() => requestOrSettings(media.request, media.status)}
-          gradientColors={["#63D6C5", "#8A76FF"]}
-          borderActive={false}
-          textStyle={{ color: "white", fontWeight: "900" }}
-          textContainerStyle={{ alignItems: "center" }}
-          style={{ minHeight: 52 }}
-        />
+        <AppText style={{ opacity: 0.8 }}>
+          We’ll ask for media access only when you add a photo or video to a care
+          log, so setup stays quick.
+        </AppText>
       </View>
 
       {/* Continue */}

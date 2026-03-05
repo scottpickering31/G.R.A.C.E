@@ -3,9 +3,17 @@ import Card from "@/components/layout/Card";
 import ListBlock from "@/components/layout/ListBlock";
 import Screen from "@/components/layout/Screen";
 import Section from "@/components/layout/Section";
+import {
+  usePrimaryPatientId,
+  useUpcomingMedicationDoses,
+} from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
 import CurrentTime from "@/src/components/calendar/CurrentTime";
+import MedsDueModal, {
+  UpcomingMedication,
+} from "@/src/components/medications/MedsDueModal";
 import ProfileHeader from "@/src/components/profile/ProfileHeader";
+import { useAuthStore } from "@/src/state/auth.store";
 import { theme } from "@/src/theme";
 import { colors } from "@/styles/shared-styles";
 import { router } from "expo-router";
@@ -19,9 +27,20 @@ import {
   Pill,
   ScanFace,
 } from "lucide-react-native";
+import { useState } from "react";
 import { View } from "react-native";
 
 export default function Dashboard() {
+  const [showMedsDue, setShowMedsDue] = useState(false);
+  const userId = useAuthStore((s) => s.session?.user.id);
+  const { data: primaryPatientId } = usePrimaryPatientId(userId);
+  const { data: upcomingMedsData } = useUpcomingMedicationDoses(primaryPatientId ?? undefined);
+  const sortedMeds: UpcomingMedication[] = upcomingMedsData ?? [];
+  const nextDue = sortedMeds[0];
+  const nextDueLabel = nextDue
+    ? nextDue.dueAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    : "No medications due";
+
   return (
     <Screen
       screenBackground={require("@/assets/images/clouds.png")}
@@ -85,14 +104,12 @@ export default function Dashboard() {
                 Icon={Pill}
                 iconBgColor="rgba(74, 144, 226, 0.18)"
                 title="Meds Due"
-                subtitle="Next: 10:00 AM"
-                rightText="3 Medications"
+                subtitle={`Next: ${nextDueLabel}`}
+                rightText={`${sortedMeds.length} Medications`}
                 rightTextContainer={{
                   backgroundColor: theme.colors.bg.skyMid,
                 }}
-                onPress={() => {
-                  return null;
-                }}
+                onPress={() => setShowMedsDue(true)}
               />
 
               <ListBlock
@@ -190,6 +207,12 @@ export default function Dashboard() {
             asperiores suscipit provident modi.
           </AppText>
         </Card>
+
+        <MedsDueModal
+          visible={showMedsDue}
+          onClose={() => setShowMedsDue(false)}
+          items={sortedMeds}
+        />
       </Section>
     </Screen>
   );

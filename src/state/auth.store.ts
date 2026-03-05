@@ -3,6 +3,8 @@ import type { Session } from "@supabase/supabase-js";
 import { create } from "zustand";
 import { queryClient } from "../lib/queryclient";
 
+let authStateSubscription: { unsubscribe: () => void } | null = null;
+
 type AuthState = {
   session: Session | null;
   hydrated: boolean;
@@ -15,6 +17,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   hydrated: false,
 
   hydrate: async () => {
+    authStateSubscription?.unsubscribe();
+    authStateSubscription = null;
+
     const { data } = await supabase.auth.getSession();
     const session = data.session ?? null;
 
@@ -32,9 +37,12 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     set({ session, hydrated: true });
 
-    supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       set({ session: session ?? null, hydrated: true });
     });
+    authStateSubscription = subscription;
   },
 
   signOut: async () => {

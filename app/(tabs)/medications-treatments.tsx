@@ -1,9 +1,17 @@
 import Section from "@/components/layout/Section";
+import {
+  usePrimaryPatientId,
+  useUpcomingMedicationDoses,
+} from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
+import MedsDueModal, {
+  UpcomingMedication,
+} from "@/src/components/medications/MedsDueModal";
 import Card from "@/src/components/layout/Card";
 import ListBlock from "@/src/components/layout/ListBlock";
 import Screen from "@/src/components/layout/Screen";
 import ProfileHeader from "@/src/components/profile/ProfileHeader";
+import { useAuthStore } from "@/src/state/auth.store";
 import {
   AlarmClock,
   AlertCircle,
@@ -16,9 +24,16 @@ import {
   Syringe,
   Tablets,
 } from "lucide-react-native";
+import { useState } from "react";
 import { View } from "react-native";
 
 export default function MedicationsTreatments() {
+  const [showMedsDue, setShowMedsDue] = useState(false);
+  const userId = useAuthStore((s) => s.session?.user.id);
+  const { data: primaryPatientId } = usePrimaryPatientId(userId);
+  const { data: upcomingMedsData } = useUpcomingMedicationDoses(primaryPatientId ?? undefined);
+  const upcomingMeds: UpcomingMedication[] = upcomingMedsData ?? [];
+
   return (
     <Screen
       screenBackground={require("@/assets/images/clouds.png")}
@@ -63,7 +78,7 @@ export default function MedicationsTreatments() {
                 subtitle="Next: 10:00 AM"
                 rightText="3 Medications"
                 showChevron={false}
-                onPress={() => {}}
+                onPress={() => setShowMedsDue(true)}
               />
               <ListBlock
                 Icon={Pill}
@@ -72,7 +87,7 @@ export default function MedicationsTreatments() {
                 subtitle="Next: 10:00 AM"
                 rightText="3 Medications"
                 showChevron={false}
-                onPress={() => {}}
+                onPress={() => setShowMedsDue(true)}
               />
               <Plus size={20} color="#1F2937" />
               <AppText>Add Medication</AppText>
@@ -94,7 +109,7 @@ export default function MedicationsTreatments() {
             subtitle="Next: 10:00 AM"
             rightText="3 Medications"
             showChevron={false}
-            onPress={() => {}}
+            onPress={() => setShowMedsDue(true)}
           />
           <ListBlock
             Icon={Syringe}
@@ -103,7 +118,7 @@ export default function MedicationsTreatments() {
             subtitle="Next: 10:00 AM"
             rightText="3 Medications"
             showChevron={false}
-            onPress={() => {}}
+            onPress={() => setShowMedsDue(true)}
           />
           <ListBlock
             Icon={Tablets}
@@ -112,9 +127,14 @@ export default function MedicationsTreatments() {
             subtitle="Next: 10:00 AM"
             rightText="3 Medications"
             showChevron={false}
-            onPress={() => {}}
+            onPress={() => setShowMedsDue(true)}
           />
         </Card>
+        <MedsDueModal
+          visible={showMedsDue}
+          onClose={() => setShowMedsDue(false)}
+          items={upcomingMeds}
+        />
       </Section>
     </Screen>
   );

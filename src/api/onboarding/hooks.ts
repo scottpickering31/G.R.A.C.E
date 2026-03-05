@@ -1,6 +1,10 @@
 // src/api/onboarding/hooks.ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { isOnboardingCompleted, setOnboardingCompleted } from "./services";
+import {
+  hasPatientAccess,
+  isOnboardingCompleted,
+  setOnboardingCompleted,
+} from "./services";
 
 export function useSetOnboardingCompleted() {
   const qc = useQueryClient();
@@ -19,6 +23,18 @@ export function useIsOnboardingCompleted(userId?: string) {
     queryFn: () => isOnboardingCompleted(userId!),
     enabled: !!userId,
 
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: "always",
+  });
+}
+
+export function useHasPatientAccess(userId?: string) {
+  return useQuery({
+    queryKey: ["has-patient-access", userId],
+    queryFn: () => hasPatientAccess(userId!),
+    enabled: !!userId,
     staleTime: 0,
     gcTime: 0,
     refetchOnMount: "always",

@@ -1,6 +1,7 @@
 import { supabase } from "@/services/supabase";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
+import MonthCalendarModal from "@/src/components/calendar/MonthCalendarModal";
 import { GradientText } from "@/src/components/layout/LinearGradientText";
 import Screen from "@/src/components/layout/Screen";
 import { theme } from "@/src/theme";
@@ -13,7 +14,18 @@ import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 type SexOption = "female" | "male" | "other" | "prefer_not_to_say";
 
-const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+function formatISODate(d: Date) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getDobDefaultDate() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 20);
+  return d;
+}
 
 export default function CreatePatientProfile() {
   const router = useRouter();
@@ -21,9 +33,10 @@ export default function CreatePatientProfile() {
   const { showLoading, hideLoading, showToast } = useUIStore();
 
   const [name, setName] = useState("");
-  const [dob, setDob] = useState("");
+  const [dobDate, setDobDate] = useState<Date | null>(null);
   const [sex, setSex] = useState<SexOption | null>(null);
   const [saving, setSaving] = useState(false);
+  const [calendarVisible, setCalendarVisible] = useState(false);
 
   const canContinue = useMemo(
     () => name.trim().length > 0 && !!userId && !saving,
@@ -43,23 +56,7 @@ export default function CreatePatientProfile() {
       return;
     }
 
-    const normalizedDob = dob.trim();
-    let dobValue: string | null = null;
-    if (normalizedDob) {
-      if (!ISO_DATE_REGEX.test(normalizedDob)) {
-        showToast("Date of birth must use YYYY-MM-DD format.", "error");
-        return;
-      }
-      const parsed = new Date(`${normalizedDob}T00:00:00Z`);
-      const isValidDate =
-        !Number.isNaN(parsed.getTime()) &&
-        parsed.toISOString().slice(0, 10) === normalizedDob;
-      if (!isValidDate) {
-        showToast("Please enter a valid calendar date.", "error");
-        return;
-      }
-      dobValue = normalizedDob;
-    }
+    const dobValue = dobDate ? formatISODate(dobDate) : null;
 
     const sexValue = sex === "prefer_not_to_say" ? null : sex;
 
@@ -138,10 +135,10 @@ export default function CreatePatientProfile() {
 
         <Field
           label="Date of birth (optional)"
-          placeholder="YYYY-MM-DD"
-          value={dob}
-          onChangeText={setDob}
+          placeholder="Select from calendar"
+          value={dobDate ? formatISODate(dobDate) : ""}
           rightIcon={<Calendar size={18} color="rgba(31,45,61,0.55)" />}
+          onPress={() => setCalendarVisible(true)}
         />
 
         <AppText weight="semibold" style={styles.fieldLabel}>
@@ -199,6 +196,33 @@ export default function CreatePatientProfile() {
           </AppText>
         </View>
       </View>
+
+      <MonthCalendarModal
+        visible={calendarVisible}
+        initialDate={dobDate ?? getDobDefaultDate()}
+        onClose={() => setCalendarVisible(false)}
+        onSelect={(selected) => {
+          const today = new Date();
+          const selectedMidnight = new Date(
+            selected.getFullYear(),
+            selected.getMonth(),
+            selected.getDate(),
+          );
+          const todayMidnight = new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate(),
+          );
+
+          if (selectedMidnight > todayMidnight) {
+            showToast("Date of birth cannot be in the future.", "error");
+            return;
+          }
+
+          setDobDate(selectedMidnight);
+          setCalendarVisible(false);
+        }}
+      />
     </Screen>
   );
 }
@@ -207,30 +231,39 @@ function Field({
   label,
   placeholder,
   value,
-  onChangeText,
   rightIcon,
+  onPress,
+  onChangeText,
 }: {
   label: string;
   placeholder: string;
   value: string;
-  onChangeText: (t: string) => void;
   rightIcon?: React.ReactNode;
+  onPress?: () => void;
+  onChangeText?: (t: string) => void;
 }) {
+  const calendarOnly = !!onPress && !onChangeText;
+
   return (
     <View style={styles.field}>
       <AppText weight="semibold" style={styles.fieldLabel}>
         {label}
       </AppText>
-      <View style={styles.inputWrap}>
+      <Pressable
+        style={styles.inputWrap}
+        onPress={onPress}
+        disabled={!calendarOnly}
+      >
         <TextInput
           value={value}
+          editable={!calendarOnly}
           onChangeText={onChangeText}
           placeholder={placeholder}
           placeholderTextColor="rgba(31,45,61,0.4)"
           style={styles.input}
         />
         {rightIcon ? <View style={styles.inputIcon}>{rightIcon}</View> : null}
-      </View>
+      </Pressable>
     </View>
   );
 }

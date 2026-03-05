@@ -1,6 +1,6 @@
 import { cardStyles, colors } from "@/styles/shared-styles";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import AppText from "../AppText";
 
@@ -33,6 +33,9 @@ function formatMonthYear(d: Date) {
 }
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const LARGE_JUMP_MONTHS_CALENDAR_MODE = 12; // 1 year
+const LARGE_JUMP_MONTHS_YEAR_MODE = 120; // 10 years
+const YEAR_GRID_SIZE = 12;
 
 export default function MonthCalendarModal({
   visible,
@@ -41,7 +44,24 @@ export default function MonthCalendarModal({
   onClose,
 }: Props) {
   const [cursor, setCursor] = useState<Date>(startOfMonth(initialDate));
+  const [showYearPicker, setShowYearPicker] = useState(false);
   const selected = initialDate;
+
+  useEffect(() => {
+    if (!visible) return;
+    setCursor(startOfMonth(initialDate));
+    setShowYearPicker(false);
+  }, [visible, initialDate]);
+
+  const yearStart = useMemo(() => {
+    const y = cursor.getFullYear();
+    return y - (y % YEAR_GRID_SIZE);
+  }, [cursor]);
+
+  const yearGrid = useMemo(
+    () => Array.from({ length: YEAR_GRID_SIZE }, (_, i) => yearStart + i),
+    [yearStart],
+  );
 
   const grid = useMemo(() => {
     const start = startOfMonth(cursor);
@@ -96,7 +116,31 @@ export default function MonthCalendarModal({
         <Pressable style={[styles.sheet, cardStyles.border]} onPress={() => {}}>
           <View style={styles.header}>
             <Pressable
-              onPress={() => setCursor((d) => addMonths(d, -1))}
+              onPress={() =>
+                setCursor((d) =>
+                  addMonths(
+                    d,
+                    showYearPicker
+                      ? -LARGE_JUMP_MONTHS_YEAR_MODE
+                      : -LARGE_JUMP_MONTHS_CALENDAR_MODE,
+                  ),
+                )
+              }
+              style={styles.headerBtn}
+            >
+              <Ionicons
+                name="play-back"
+                size={20}
+                color={colors.brand.primary}
+              />
+            </Pressable>
+
+            <Pressable
+              onPress={() =>
+                setCursor((d) =>
+                  addMonths(d, showYearPicker ? -YEAR_GRID_SIZE : -1),
+                )
+              }
               style={styles.headerBtn}
             >
               <Ionicons
@@ -106,12 +150,21 @@ export default function MonthCalendarModal({
               />
             </Pressable>
 
-            <AppText style={styles.headerTitle}>
-              {formatMonthYear(cursor)}
-            </AppText>
+            <Pressable
+              onPress={() => setShowYearPicker((v) => !v)}
+              style={styles.headerTitleBtn}
+            >
+              <AppText style={styles.headerTitle}>
+                {formatMonthYear(cursor)}
+              </AppText>
+            </Pressable>
 
             <Pressable
-              onPress={() => setCursor((d) => addMonths(d, 1))}
+              onPress={() =>
+                setCursor((d) =>
+                  addMonths(d, showYearPicker ? YEAR_GRID_SIZE : 1),
+                )
+              }
               style={styles.headerBtn}
             >
               <Ionicons
@@ -120,38 +173,84 @@ export default function MonthCalendarModal({
                 color={colors.brand.primary}
               />
             </Pressable>
+
+            <Pressable
+              onPress={() =>
+                setCursor((d) =>
+                  addMonths(
+                    d,
+                    showYearPicker
+                      ? LARGE_JUMP_MONTHS_YEAR_MODE
+                      : LARGE_JUMP_MONTHS_CALENDAR_MODE,
+                  ),
+                )
+              }
+              style={styles.headerBtn}
+            >
+              <Ionicons
+                name="play-forward"
+                size={20}
+                color={colors.brand.primary}
+              />
+            </Pressable>
           </View>
 
-          <View style={styles.weekHeader}>
-            {DAY_NAMES.map((n) => (
-              <AppText key={n} style={styles.weekHeaderText}>
-                {n}
-              </AppText>
-            ))}
-          </View>
-
-          <View style={styles.grid}>
-            {grid.map(({ date, inMonth }) => {
-              const active = isSameDay(date, selected);
-              return (
-                <Pressable
-                  key={date.toISOString()}
-                  onPress={() => onSelect(date)}
-                  style={[styles.cell, active && styles.cellActive]}
-                >
-                  <AppText
-                    style={[
-                      styles.cellText,
-                      !inMonth && styles.cellTextMuted,
-                      active && styles.cellTextActive,
-                    ]}
+          {showYearPicker ? (
+            <View style={styles.yearGrid}>
+              {yearGrid.map((year) => {
+                const active = year === selected.getFullYear();
+                return (
+                  <Pressable
+                    key={year}
+                    onPress={() => {
+                      setCursor((d) => new Date(year, d.getMonth(), 1));
+                      setShowYearPicker(false);
+                    }}
+                    style={[styles.yearCell, active && styles.yearCellActive]}
                   >
-                    {date.getDate()}
+                    <AppText
+                      style={[styles.yearText, active && styles.yearTextActive]}
+                    >
+                      {year}
+                    </AppText>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : (
+            <>
+              <View style={styles.weekHeader}>
+                {DAY_NAMES.map((n) => (
+                  <AppText key={n} style={styles.weekHeaderText}>
+                    {n}
                   </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
+                ))}
+              </View>
+
+              <View style={styles.grid}>
+                {grid.map(({ date, inMonth }) => {
+                  const active = isSameDay(date, selected);
+                  return (
+                    <Pressable
+                      key={date.toISOString()}
+                      onPress={() => onSelect(date)}
+                      style={[styles.cell, active && styles.cellActive]}
+                    >
+                      <AppText
+                        style={[
+                          styles.cellText,
+                          !inMonth && styles.cellTextMuted,
+                          active && styles.cellTextActive,
+                        ]}
+                      >
+                        {date.getDate()}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          )}
 
           <Pressable onPress={onClose} style={styles.closeBtn}>
             <AppText style={styles.closeText}>Close</AppText>
@@ -193,6 +292,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     color: colors.text.primary,
   },
+  headerTitleBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(74,144,226,0.08)",
+  },
   weekHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -210,6 +315,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+  },
+  yearGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 8,
+  },
+  yearCell: {
+    width: "31%",
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(74,144,226,0.08)",
+  },
+  yearCellActive: {
+    backgroundColor: colors.brand.primary,
+  },
+  yearText: {
+    fontSize: 15,
+    color: colors.text.primary,
+    fontWeight: "700",
+  },
+  yearTextActive: {
+    color: "#fff",
   },
   cell: {
     width: 42,

@@ -45,3 +45,15 @@ export async function isOnboardingCompleted(userId: string) {
 
   return !!data.onboarding_completed_at;
 }
+
+export async function hasPatientAccess(userId: string) {
+  const { data, error } = await supabase
+    .from("patient_members")
+    .select("patient_id")
+    .eq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw error;
+  return !!data;
+}

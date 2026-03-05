@@ -1,5 +1,8 @@
 import Loading from "@/components/Loading";
-import { useIsOnboardingCompleted } from "@/src/api/onboarding/hooks";
+import {
+  useHasPatientAccess,
+  useIsOnboardingCompleted,
+} from "@/src/api/onboarding/hooks";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
 import { useAuthStore } from "@/src/state/auth.store";
@@ -15,11 +18,18 @@ export default function PostLoginGate() {
 
   const {
     data: completed,
-    isLoading,
-    isError,
-    error,
-    refetch,
+    isLoading: onboardingLoading,
+    isError: onboardingError,
+    error: onboardingErrorObj,
+    refetch: refetchOnboarding,
   } = useIsOnboardingCompleted(userId);
+  const {
+    data: hasPatient,
+    isLoading: patientLoading,
+    isError: patientError,
+    error: patientErrorObj,
+    refetch: refetchPatient,
+  } = useHasPatientAccess(userId);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -29,19 +39,36 @@ export default function PostLoginGate() {
       return;
     }
 
-    if (isLoading || isError) return;
+    if (onboardingLoading || patientLoading || onboardingError || patientError) return;
 
-    if (!completed) {
+    if (!hasPatient) {
       router.replace("/(onboarding)/create-patient-profile");
       return;
     }
 
+    if (!completed) {
+      router.replace("/(onboarding)/permissions");
+      return;
+    }
+
     router.replace("/(tabs)");
-  }, [hydrated, session, isLoading, isError, completed, router]);
+  }, [
+    hydrated,
+    session,
+    onboardingLoading,
+    patientLoading,
+    onboardingError,
+    patientError,
+    hasPatient,
+    completed,
+    router,
+  ]);
 
-  if (!hydrated || isLoading) return <Loading />;
+  if (!hydrated || onboardingLoading || patientLoading) return <Loading />;
 
-  if (isError) {
+  if (onboardingError || patientError) {
+    const message = onboardingErrorObj?.message ?? patientErrorObj?.message;
+
     return (
       <View style={{ flex: 1, justifyContent: "center", padding: 20, gap: 12 }}>
         <AppText
@@ -52,10 +79,13 @@ export default function PostLoginGate() {
         <AppText style={{ textAlign: "center", opacity: 0.7 }}>
           Please check your connection and try again.
         </AppText>
-        <AppText>{error.message}</AppText>
+        <AppText>{message}</AppText>
         <PillButton
           label="Retry"
-          onPress={() => refetch()}
+          onPress={() => {
+            refetchOnboarding();
+            refetchPatient();
+          }}
           gradientColors={["#63D6C5", "#8A76FF"]}
           borderActive={false}
           textStyle={{ color: "white", fontWeight: "800" }}
