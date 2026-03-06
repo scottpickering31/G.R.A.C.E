@@ -3,10 +3,12 @@ import Loading from "@/src/components/Loading";
 import { theme } from "@/src/theme";
 import { useAuthStore } from "@/state/auth.store";
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect, Tabs, useRouter } from "expo-router";
+import { Redirect, Tabs, usePathname, useRouter } from "expo-router";
+import { Pressable } from "react-native";
 
 export default function TabsLayout() {
   const router = useRouter();
+  const pathname = usePathname();
   // const insets = useSafeAreaInsets();
   const session = useAuthStore((s) => s.session);
   const hydrated = useAuthStore((s) => s.hydrated);
@@ -19,6 +21,15 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: true,
         headerLeft: () => <BackToHomeButton />,
+        headerRight: () =>
+          pathname === "/(tabs)/(pages)/user-profile" ? null : (
+            <Pressable
+              onPress={() => router.push("/(tabs)/(pages)/user-profile")}
+              style={{ paddingHorizontal: 15 }}
+            >
+              <Ionicons name="settings-outline" size={24} color="#1F2937" />
+            </Pressable>
+          ),
         headerTransparent: true,
         headerShadowVisible: false,
         headerTitleStyle: { fontWeight: "700" },
@@ -164,6 +175,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="(pages)/allergies-alerts"
         options={{ href: null, title: "Allergies & Alerts" }}
+      />
+      <Tabs.Screen
+        name="(pages)/user-profile"
+        options={{ href: null, title: "My Profile" }}
       />
     </Tabs>
   );

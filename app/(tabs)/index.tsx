@@ -25,10 +25,8 @@ import {
   CalendarClock,
   ChevronRight,
   Clock,
-  Plus,
   Package,
   Pill,
-  ScanFace,
 } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -85,27 +83,6 @@ export default function Dashboard() {
         >
           <View style={styles.headerRow}>
             <ProfileHeader />
-            <PillButton
-              label="Add Profile"
-              Icon={ScanFace}
-              RightIcon={ChevronRight}
-              iconColor={colors.brand.primary}
-              showIconChip={true}
-              rightIconColor={colors.brand.primary}
-              iconSize={20}
-              textStyle={{
-                color: "#4A90E2",
-                fontSize: theme.typography.fontSize.sm,
-                fontWeight: "600",
-              }}
-              style={{
-                paddingVertical: 8,
-                paddingHorizontal: 7,
-                width: "44%",
-                alignSelf: "center",
-              }}
-              onPress={() => {}}
-            />
           </View>
 
           <Card
@@ -117,9 +94,7 @@ export default function Dashboard() {
             <AppText weight="bold" style={styles.heroTitle}>
               Today&apos;s Care Dashboard
             </AppText>
-            <AppText style={styles.heroSubtitle}>
-              {medsDueSubtitle}
-            </AppText>
+            <AppText style={styles.heroSubtitle}>{medsDueSubtitle}</AppText>
             <View style={styles.heroMetaRow}>
               <View style={styles.heroMetaChip}>
                 <Clock size={14} color={theme.colors.brand.dark} />
@@ -178,11 +153,7 @@ export default function Dashboard() {
 
           <Card elevationActive={true} borderActive={true} padding={"md"}>
             <View style={styles.sectionTitleRow}>
-              <AppText style={styles.sectionTitle}>Priority Queue</AppText>
-              <Pressable style={styles.miniAction}>
-                <Plus size={14} color={theme.colors.brand.dark} />
-                <AppText style={styles.miniActionText}>Add Item</AppText>
-              </Pressable>
+              <AppText style={styles.sectionTitle}>Today&apos;s Tasks</AppText>
             </View>
             <Card elevationActive={false} borderActive={false} padding={"none"}>
               <View>
