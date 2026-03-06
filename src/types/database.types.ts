@@ -14,6 +14,68 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          appointment_type: string
+          clinician: string | null
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          ends_at: string | null
+          id: string
+          location: string | null
+          notes: string | null
+          patient_id: string
+          source: string
+          starts_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_type?: string
+          clinician?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          ends_at?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          patient_id: string
+          source?: string
+          starts_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_type?: string
+          clinician?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          ends_at?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          patient_id?: string
+          source?: string
+          starts_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medication_doses: {
         Row: {
           created_at: string

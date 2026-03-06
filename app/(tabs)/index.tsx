@@ -23,14 +23,15 @@ import {
   AlertTriangle,
   BriefcaseMedical,
   CalendarClock,
-  CheckSquare2,
   ChevronRight,
   Clock,
+  Plus,
+  Package,
   Pill,
   ScanFace,
 } from "lucide-react-native";
 import { useState } from "react";
-import { View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 function format24HourWithMeridiem(d: Date) {
   const time24 = d.toLocaleTimeString([], {
@@ -82,14 +83,8 @@ export default function Dashboard() {
             await refetchUpcomingMeds();
           }}
         >
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              width: "100%",
-            }}
-          >
-            <ProfileHeader style={{ width: "57%" }} />
+          <View style={styles.headerRow}>
+            <ProfileHeader />
             <PillButton
               label="Add Profile"
               Icon={ScanFace}
@@ -106,32 +101,88 @@ export default function Dashboard() {
               style={{
                 paddingVertical: 8,
                 paddingHorizontal: 7,
-                width: "43%",
+                width: "44%",
                 alignSelf: "center",
               }}
               onPress={() => {}}
             />
           </View>
-          <Card elevationActive={true} borderActive={true} padding="sm">
-            <AppText>
-              <AppText style={{ fontWeight: "700", textAlign: "center" }}>
-                Welcome back!
-              </AppText>{" "}
-              Here’s a look at today’s schedule:
+
+          <Card
+            elevationActive={true}
+            borderActive={true}
+            padding="md"
+            style={styles.heroCard}
+          >
+            <AppText weight="bold" style={styles.heroTitle}>
+              Today&apos;s Care Dashboard
             </AppText>
+            <AppText style={styles.heroSubtitle}>
+              {medsDueSubtitle}
+            </AppText>
+            <View style={styles.heroMetaRow}>
+              <View style={styles.heroMetaChip}>
+                <Clock size={14} color={theme.colors.brand.dark} />
+                <AppText style={styles.heroMetaText}>{nextDueLabel}</AppText>
+              </View>
+              <View style={styles.heroMetaChip}>
+                <Pill size={14} color={theme.colors.brand.dark} />
+                <AppText style={styles.heroMetaText}>{medsWindowLabel}</AppText>
+              </View>
+            </View>
           </Card>
 
-          <Card elevationActive={true} borderActive={true} padding={"md"}>
-            <View
-              style={{ flexDirection: "row", justifyContent: "space-between" }}
+          <View style={styles.quickMetricsRow}>
+            <Card
+              elevationActive={true}
+              borderActive={true}
+              padding="md"
+              style={styles.metricCard}
             >
-              <AppText style={{ fontWeight: "700" }}>Todays Overview:</AppText>
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 5 }}
-              >
-                <Clock size={20} color="#4A90E2" />
+              <AppText style={styles.metricLabel}>Due Now</AppText>
+              <AppText weight="bold" style={styles.metricValue}>
+                {sortedMeds.length}
+              </AppText>
+              <AppText style={styles.metricSubLabel}>Medications</AppText>
+            </Card>
+
+            <Card
+              elevationActive={true}
+              borderActive={true}
+              padding="md"
+              style={styles.metricCard}
+            >
+              <AppText style={styles.metricLabel}>Current Time</AppText>
+              <View style={styles.timeRow}>
+                <Clock size={14} color="#4A90E2" />
                 <CurrentTime />
               </View>
+              <AppText style={styles.metricSubLabel}>Live</AppText>
+            </Card>
+
+            <Card
+              elevationActive={true}
+              borderActive={true}
+              padding="md"
+              style={styles.metricCard}
+            >
+              <AppText style={styles.metricLabel}>Stock</AppText>
+              <AppText weight="bold" style={styles.metricValue}>
+                Track
+              </AppText>
+              <Pressable onPress={() => router.push("/stock")}>
+                <AppText style={styles.metricLink}>Open</AppText>
+              </Pressable>
+            </Card>
+          </View>
+
+          <Card elevationActive={true} borderActive={true} padding={"md"}>
+            <View style={styles.sectionTitleRow}>
+              <AppText style={styles.sectionTitle}>Priority Queue</AppText>
+              <Pressable style={styles.miniAction}>
+                <Plus size={14} color={theme.colors.brand.dark} />
+                <AppText style={styles.miniActionText}>Add Item</AppText>
+              </Pressable>
             </View>
             <Card elevationActive={false} borderActive={false} padding={"none"}>
               <View>
@@ -152,8 +203,8 @@ export default function Dashboard() {
                   Icon={CalendarClock}
                   iconBgColor="rgba(126, 200, 160, 0.22)"
                   title="Appointments"
-                  subtitle="Speech Therapy"
-                  rightText="1:00 PM"
+                  subtitle="Tap to review today's schedule"
+                  rightText="Open"
                   rightTextContainer={{
                     backgroundColor: "rgba(126, 200, 160, 0.22)",
                   }}
@@ -161,11 +212,11 @@ export default function Dashboard() {
                 />
 
                 <ListBlock
-                  Icon={CheckSquare2}
+                  Icon={Package}
                   iconBgColor="rgba(245, 193, 108, 0.25)"
-                  title="Tasks"
-                  subtitle="2 Tasks"
-                  onPress={() => router.push("/(pages)/tasks")}
+                  title="Stock"
+                  subtitle="Check low supplies and refill status"
+                  onPress={() => router.push("/stock")}
                 />
 
                 <ListBlock
@@ -189,7 +240,7 @@ export default function Dashboard() {
             padding="md"
             borderActive={true}
             elevationActive={true}
-            style={{ alignItems: "center", gap: 5 }}
+            style={styles.emergencyCard}
           >
             <PillButton
               label="EMERGENCY"
@@ -207,41 +258,39 @@ export default function Dashboard() {
                 textAlign: "center",
                 fontSize: theme.typography.fontSize.lg,
               }}
-              style={{ backgroundColor: "red", width: "60%" }}
+              style={{ backgroundColor: "#D14343", width: "72%" }}
             />
-            <AppText>Tap for critical info and lock phone</AppText>
-          </Card>
-          <Card padding="md" borderActive={true} elevationActive={true}>
-            <AppText>
-              Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-              Recusandae sunt ab sequi sapiente, nobis a minus! Aliquam eligendi
-              quibusdam aperiam, voluptatibus cumque distinctio doloribus
-              mollitia obcaecati asperiores suscipit provident modi.
+            <AppText style={styles.emergencySubtitle}>
+              Critical information and rapid lock-screen access
             </AppText>
           </Card>
+
           <Card padding="md" borderActive={true} elevationActive={true}>
-            <AppText>
-              Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-              Recusandae sunt ab sequi sapiente, nobis a minus! Aliquam eligendi
-              quibusdam aperiam, voluptatibus cumque distinctio doloribus
-              mollitia obcaecati asperiores suscipit provident modi.
-            </AppText>
-          </Card>
-          <Card padding="md" borderActive={true} elevationActive={true}>
-            <AppText>
-              Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-              Recusandae sunt ab sequi sapiente, nobis a minus! Aliquam eligendi
-              quibusdam aperiam, voluptatibus cumque distinctio doloribus
-              mollitia obcaecati asperiores suscipit provident modi.
-            </AppText>
-          </Card>
-          <Card padding="md" borderActive={true} elevationActive={true}>
-            <AppText>
-              Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-              Recusandae sunt ab sequi sapiente, nobis a minus! Aliquam eligendi
-              quibusdam aperiam, voluptatibus cumque distinctio doloribus
-              mollitia obcaecati asperiores suscipit provident modi.
-            </AppText>
+            <View style={styles.sectionTitleRow}>
+              <AppText style={styles.sectionTitle}>Care Focus Today</AppText>
+            </View>
+            <View style={styles.focusRow}>
+              <Pressable
+                style={styles.focusCard}
+                onPress={() => router.push("/appointments")}
+              >
+                <CalendarClock size={16} color={theme.colors.brand.dark} />
+                <AppText weight="semibold" style={styles.focusTitle}>
+                  Appointments
+                </AppText>
+                <AppText style={styles.focusSub}>Review timeline</AppText>
+              </Pressable>
+              <Pressable
+                style={styles.focusCard}
+                onPress={() => router.push("/stock")}
+              >
+                <Package size={16} color={theme.colors.brand.dark} />
+                <AppText weight="semibold" style={styles.focusTitle}>
+                  Inventory
+                </AppText>
+                <AppText style={styles.focusSub}>Check stock levels</AppText>
+              </Pressable>
+            </View>
           </Card>
 
           <MedsDueModal
@@ -256,3 +305,134 @@ export default function Dashboard() {
     </SwipeableTabScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  heroCard: {
+    backgroundColor: "rgba(234,243,251,0.85)",
+    borderColor: "rgba(74,144,226,0.18)",
+  },
+  heroTitle: {
+    fontSize: theme.typography.fontSize.lg,
+  },
+  heroSubtitle: {
+    marginTop: 4,
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  heroMetaRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    gap: 8,
+  },
+  heroMetaChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.2)",
+    backgroundColor: "rgba(255,255,255,0.72)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  heroMetaText: {
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: "600",
+    color: theme.colors.brand.dark,
+  },
+  quickMetricsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  metricCard: {
+    flex: 1,
+    alignItems: "center",
+    minHeight: 96,
+  },
+  metricLabel: {
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
+  },
+  metricValue: {
+    marginTop: 4,
+    fontSize: theme.typography.fontSize.lg,
+  },
+  metricSubLabel: {
+    marginTop: 2,
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
+  },
+  metricLink: {
+    marginTop: 3,
+    color: theme.colors.brand.dark,
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: "600",
+  },
+  timeRow: {
+    marginTop: 4,
+    flexDirection: "row",
+    gap: 4,
+    alignItems: "center",
+  },
+  sectionTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  sectionTitle: {
+    fontWeight: "700",
+  },
+  miniAction: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.22)",
+    backgroundColor: "rgba(74,144,226,0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  miniActionText: {
+    color: theme.colors.brand.dark,
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: "600",
+  },
+  emergencyCard: {
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,244,244,0.92)",
+  },
+  emergencySubtitle: {
+    color: theme.colors.text.secondary,
+    textAlign: "center",
+    fontSize: theme.typography.fontSize.xs,
+  },
+  focusRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 4,
+  },
+  focusCard: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.18)",
+    backgroundColor: "rgba(234,243,251,0.56)",
+    padding: 10,
+    gap: 3,
+  },
+  focusTitle: {
+    fontSize: theme.typography.fontSize.sm,
+  },
+  focusSub: {
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
+  },
+});

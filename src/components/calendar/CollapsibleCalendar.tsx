@@ -1,7 +1,7 @@
 import { theme } from "@/src/theme";
 import { cardStyles, colors } from "@/styles/shared-styles";
 import { Ionicons } from "@expo/vector-icons";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View, ViewStyle } from "react-native";
 import AppText from "../AppText";
 import MonthCalendarModal from "./MonthCalendarModal";
@@ -10,6 +10,7 @@ type Props = {
   value?: Date;
   onChange?: (date: Date) => void;
   style?: ViewStyle;
+  markedDateKeys?: ReadonlySet<string>;
 };
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -41,9 +42,26 @@ function formatMonthYear(d: Date) {
   return `${month} ${d.getFullYear()}`;
 }
 
-export default function CollapsibleCalendar({ value, onChange, style }: Props) {
+function toDateKey(d: Date) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export default function CollapsibleCalendar({
+  value,
+  onChange,
+  style,
+  markedDateKeys,
+}: Props) {
   const [selected, setSelected] = useState<Date>(value ?? new Date());
   const [modalOpen, setModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!value) return;
+    setSelected(value);
+  }, [value]);
 
   const weekStart = useMemo(() => startOfWeek(selected), [selected]);
   const weekDays = useMemo(
@@ -102,6 +120,7 @@ export default function CollapsibleCalendar({ value, onChange, style }: Props) {
         <View style={styles.weekRow}>
           {weekDays.map((d) => {
             const active = isSameDay(d, selected);
+            const hasEvent = markedDateKeys?.has(toDateKey(d)) ?? false;
             return (
               <Pressable
                 key={d.toISOString()}
@@ -120,8 +139,7 @@ export default function CollapsibleCalendar({ value, onChange, style }: Props) {
                   <AppText style={styles.dayText}>{d.getDate()}</AppText>
                 )}
 
-                {/* optional dot indicator (example) */}
-                <View style={[styles.dot, { opacity: 1 }]} />
+                {hasEvent ? <View style={styles.dot} /> : null}
               </Pressable>
             );
           })}
@@ -131,6 +149,7 @@ export default function CollapsibleCalendar({ value, onChange, style }: Props) {
       <MonthCalendarModal
         visible={modalOpen}
         initialDate={selected}
+        markedDateKeys={markedDateKeys}
         onClose={() => setModalOpen(false)}
         onSelect={(d) => {
           setDate(d);

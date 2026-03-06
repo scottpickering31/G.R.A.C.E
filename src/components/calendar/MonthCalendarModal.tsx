@@ -9,6 +9,7 @@ type Props = {
   initialDate: Date;
   onSelect: (d: Date) => void;
   onClose: () => void;
+  markedDateKeys?: ReadonlySet<string>;
 };
 
 function startOfMonth(d: Date) {
@@ -31,6 +32,12 @@ function formatMonthYear(d: Date) {
   const month = d.toLocaleString(undefined, { month: "long" });
   return `${month} ${d.getFullYear()}`;
 }
+function toDateKey(d: Date) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 const LARGE_JUMP_MONTHS_CALENDAR_MODE = 12; // 1 year
@@ -42,6 +49,7 @@ export default function MonthCalendarModal({
   initialDate,
   onSelect,
   onClose,
+  markedDateKeys,
 }: Props) {
   const [cursor, setCursor] = useState<Date>(startOfMonth(initialDate));
   const [showYearPicker, setShowYearPicker] = useState(false);
@@ -230,21 +238,32 @@ export default function MonthCalendarModal({
               <View style={styles.grid}>
                 {grid.map(({ date, inMonth }) => {
                   const active = isSameDay(date, selected);
+                  const hasEvent = markedDateKeys?.has(toDateKey(date)) ?? false;
                   return (
                     <Pressable
                       key={date.toISOString()}
                       onPress={() => onSelect(date)}
                       style={[styles.cell, active && styles.cellActive]}
                     >
-                      <AppText
-                        style={[
-                          styles.cellText,
-                          !inMonth && styles.cellTextMuted,
-                          active && styles.cellTextActive,
-                        ]}
-                      >
-                        {date.getDate()}
-                      </AppText>
+                      <View style={styles.cellContent}>
+                        <AppText
+                          style={[
+                            styles.cellText,
+                            !inMonth && styles.cellTextMuted,
+                            active && styles.cellTextActive,
+                          ]}
+                        >
+                          {date.getDate()}
+                        </AppText>
+                        {inMonth && hasEvent ? (
+                          <View
+                            style={[
+                              styles.eventDot,
+                              active && styles.eventDotActive,
+                            ]}
+                          />
+                        ) : null}
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -350,6 +369,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 8,
   },
+  cellContent: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
   cellActive: {
     backgroundColor: colors.brand.primary,
   },
@@ -363,6 +386,16 @@ const styles = StyleSheet.create({
   },
   cellTextActive: {
     color: "#fff",
+  },
+  eventDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 999,
+    marginTop: 2,
+    backgroundColor: colors.brand.primary,
+  },
+  eventDotActive: {
+    backgroundColor: "#fff",
   },
   closeBtn: {
     marginTop: 8,

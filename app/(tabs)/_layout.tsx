@@ -28,6 +28,7 @@ export default function TabsLayout() {
           backgroundColor: "rgba(255, 255, 255, 0.95)",
           height: "10%",
           paddingTop: 15,
+          paddingHorizontal: 0,
           // shadow (iOS)
           shadowColor: "#000",
           shadowOpacity: 0.08,
@@ -44,6 +45,16 @@ export default function TabsLayout() {
         tabBarLabelStyle: {
           fontSize: theme.typography.fontSize.xs,
           fontWeight: "600",
+          textAlign: "center",
+        },
+        tabBarItemStyle: {
+          flex: 1,
+          minWidth: 0,
+          alignItems: "center",
+          justifyContent: "center",
+        },
+        tabBarIconStyle: {
+          alignSelf: "center",
         },
       }}
     >
