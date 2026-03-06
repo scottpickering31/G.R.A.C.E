@@ -20,6 +20,7 @@ type ListBlockProps = {
 
   title: string;
   subtitle?: string;
+  thirdSubtitle?: string;
 
   rightText?: string;
   rightTextContainer?: ViewStyle;
@@ -40,6 +41,7 @@ export default function ListBlock({
 
   title,
   subtitle,
+  thirdSubtitle,
 
   rightText,
   rightTextStyles,
@@ -81,6 +83,12 @@ export default function ListBlock({
           {!!subtitle && (
             <AppText style={styles.subtitle} numberOfLines={1}>
               {subtitle}
+            </AppText>
+          )}
+
+          {!!thirdSubtitle && (
+            <AppText style={styles.thirdSubtitle} numberOfLines={1}>
+              {thirdSubtitle}
             </AppText>
           )}
         </View>
@@ -127,6 +135,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: theme.typography.fontSize.xs,
     color: colors.text.secondary,
+  },
+  thirdSubtitle: {
+    fontSize: theme.typography.fontSize.xs,
+    color: colors.text.secondary,
+    fontWeight: "700",
   },
   rightCol: {
     flexDirection: "row",

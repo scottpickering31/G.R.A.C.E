@@ -91,6 +91,22 @@ export default function TabsLayout() {
       />
 
       <Tabs.Screen
+        name="stock"
+        options={{
+          title: "Stock",
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons
+              name={focused ? "cube" : "cube-outline"}
+              size={size}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* Future Development: */}
+
+      <Tabs.Screen
         name="more"
         options={{
           title: "More",
@@ -115,8 +131,8 @@ export default function TabsLayout() {
 
       {/* Hidden routes */}
       <Tabs.Screen
-        name="(pages)/profiles"
-        options={{ href: null, title: "Profiles" }}
+        name="(pages)/patient-profiles"
+        options={{ href: null, title: "Patient Profiles" }}
       />
       <Tabs.Screen
         name="(pages)/medical-plans"

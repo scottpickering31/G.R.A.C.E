@@ -5,6 +5,7 @@ import Section from "@/components/layout/Section";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import AppText from "@/src/components/AppText";
 import CollapsibleCalendar from "@/src/components/calendar/CollapsibleCalendar";
+import SwipeableTabScreen from "@/src/components/navigation/SwipeableTabScreen";
 import { theme } from "@/src/theme";
 import { colors } from "@/styles/shared-styles";
 import { Calendar1, ChevronRight, HeartPulse } from "lucide-react-native";
@@ -14,11 +15,12 @@ import { StyleSheet, View } from "react-native";
 export default function Appointments() {
   const [date, setDate] = useState(new Date());
   return (
-    <Screen
-      screenBackground={require("@/assets/images/clouds.png")}
-      useSafeArea={false}
-    >
-      <Section>
+    <SwipeableTabScreen activeRoute="/(tabs)/appointments">
+      <Screen
+        screenBackground={require("@/assets/images/clouds.png")}
+        useSafeArea={false}
+      >
+        <Section>
         <View style={styles.headerContainer}>
           <ProfileHeader style={{ width: "60%" }} />
           <PillButton
@@ -69,8 +71,9 @@ export default function Appointments() {
         <Card padding="md" borderActive={true} elevationActive={true}>
           <AppText>OT Therapy Session</AppText>
         </Card>
-      </Section>
-    </Screen>
+        </Section>
+      </Screen>
+    </SwipeableTabScreen>
   );
 }
 

@@ -1,4 +1,5 @@
 import AppText from "@/src/components/AppText";
+import SwipeableTabScreen from "@/src/components/navigation/SwipeableTabScreen";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, RefreshControl, ScrollView } from "react-native";
@@ -6,7 +7,7 @@ import { Pressable, RefreshControl, ScrollView } from "react-native";
 const ITEMS = [
   { label: "Medical Plans", href: "/(tabs)/(pages)/medical-plans" },
   { label: "Care Circle", href: "/(tabs)/(pages)/care-circle" },
-  { label: "Profiles", href: "/(tabs)/(pages)/profiles" },
+  { label: "Patient Profiles", href: "/(tabs)/(pages)/patient-profiles" },
   { label: "Notes, Logs & Media", href: "/(tabs)/(pages)/notes-logs-media" },
   { label: "Emergency", href: "/(tabs)/(pages)/emergency" },
   { label: "Allergies & Alerts", href: "/(tabs)/(pages)/allergies-alerts" },
@@ -23,24 +24,28 @@ export default function More() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={{ padding: 24, gap: 12 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <AppText style={{ fontSize: 24, fontWeight: "800" }}>More</AppText>
+    <SwipeableTabScreen activeRoute="/(tabs)/more">
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 24, gap: 12 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        <AppText style={{ fontSize: 24, fontWeight: "800" }}>More</AppText>
 
-      {ITEMS.map((item) => (
-        <Pressable
-          key={item.href}
-          onPress={() => router.push(item.href)}
-          style={{ padding: 14, borderRadius: 14, borderWidth: 1 }}
-        >
-          <AppText style={{ fontSize: 16, fontWeight: "600" }}>
-            {item.label}
-          </AppText>
-        </Pressable>
-      ))}
-    </ScrollView>
+        {ITEMS.map((item) => (
+          <Pressable
+            key={item.href}
+            onPress={() => router.push(item.href)}
+            style={{ padding: 14, borderRadius: 14, borderWidth: 1 }}
+          >
+            <AppText style={{ fontSize: 16, fontWeight: "600" }}>
+              {item.label}
+            </AppText>
+          </Pressable>
+        ))}
+      </ScrollView>
+    </SwipeableTabScreen>
   );
 }

@@ -10,6 +10,7 @@ import CurrentTime from "@/src/components/calendar/CurrentTime";
 import Card from "@/src/components/layout/Card";
 import ListBlock from "@/src/components/layout/ListBlock";
 import Screen from "@/src/components/layout/Screen";
+import SwipeableTabScreen from "@/src/components/navigation/SwipeableTabScreen";
 import AddMedicationModal from "@/src/components/medications/AddMedicationModal";
 import MedicationDetailModal from "@/src/components/medications/MedicationDetailModal";
 import MedsDueModal, {
@@ -21,6 +22,20 @@ import { useAuthStore } from "@/src/state/auth.store";
 import { AlarmClock, Clock, Pill, Plus } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
+
+function format24HourWithMeridiem(d: Date) {
+  const time24 = d.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const meridiem = d.toLocaleTimeString([], {
+    hour: "numeric",
+    hour12: true,
+  });
+  const suffix = meridiem.slice(-2).toUpperCase();
+  return `${time24} ${suffix}`;
+}
 
 function formatSchedule(
   scheduleType: "as_needed" | "daily_same_time" | "one_off",
@@ -89,7 +104,7 @@ export default function MedicationsTreatments() {
     const first = [...upcomingMeds].sort(
       (a, b) => a.dueAt.getTime() - b.dueAt.getTime(),
     )[0];
-    return `Due at: ${first.dueAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+    return `Due at: ${format24HourWithMeridiem(first.dueAt)}`;
   })();
   const nextMedicationName = (() => {
     if (!upcomingMeds.length) return "No meds due";
@@ -113,17 +128,18 @@ export default function MedicationsTreatments() {
         : "Next 7 days";
 
   return (
-    <Screen
-      screenBackground={require("@/assets/images/clouds.png")}
-      useSafeArea={false}
-    >
-      <Section
-        onRefresh={async () => {
-          await refetchPrimaryPatient();
-          await refetchUpcomingMeds();
-          await refetchMedications();
-        }}
+    <SwipeableTabScreen activeRoute="/(tabs)/medications-treatments">
+      <Screen
+        screenBackground={require("@/assets/images/clouds.png")}
+        useSafeArea={false}
       >
+        <Section
+          onRefresh={async () => {
+            await refetchPrimaryPatient();
+            await refetchUpcomingMeds();
+            await refetchMedications();
+          }}
+        >
         <ProfileHeader />
 
         <Card padding="cardInset" borderActive={true} elevationActive={true}>
@@ -228,8 +244,9 @@ export default function MedicationsTreatments() {
           medication={selectedMedication}
           patientId={primaryPatientId ?? undefined}
         />
-      </Section>
-    </Screen>
+        </Section>
+      </Screen>
+    </SwipeableTabScreen>
   );
 }
 

@@ -133,7 +133,7 @@ export async function getMedications(
 export async function getUpcomingMedicationDoses(
   patientId: string,
   windowHours = 24,
-  limit = 20,
+  limit = 500,
 ): Promise<UpcomingMedication[]> {
   const now = new Date();
   const inWindowDate = new Date(now.getTime() + windowHours * 60 * 60 * 1000);
@@ -141,7 +141,7 @@ export async function getUpcomingMedicationDoses(
   const inWindowIso = inWindowDate.toISOString();
   const query = supabase
     .from("medication_doses")
-    .select("id,due_at,note,medications(name,dose)")
+    .select("id,due_at,note,medications(id,name,dose)")
     .eq("patient_id", patientId)
     .eq("status", "pending")
     .gte("due_at", nowIso)
@@ -185,7 +185,10 @@ export async function getUpcomingMedicationDoses(
 
   const projected: UpcomingMedication[] = [];
   const existingKeys = new Set(
-    fromDoseRows.map((item) => `${item.name.toLowerCase()}|${item.dueAt.getTime()}`),
+    ((data ?? []) as MedicationDoseWithMedication[]).map((row) => {
+      const medId = row.medications?.id ?? "";
+      return `${medId}|${new Date(row.due_at).getTime()}`;
+    }),
   );
 
   const inWindow = (d: Date) => d >= now && d < inWindowDate;
@@ -194,7 +197,7 @@ export async function getUpcomingMedicationDoses(
     if (med.schedule_type === "one_off" && med.one_off_due_at) {
       const due = new Date(med.one_off_due_at);
       if (inWindow(due)) {
-        const key = `${med.name.toLowerCase()}|${due.getTime()}`;
+        const key = `${med.id}|${due.getTime()}`;
         if (!existingKeys.has(key)) {
           projected.push({
             id: `projected-oneoff-${med.id}-${due.toISOString()}`,
@@ -203,6 +206,7 @@ export async function getUpcomingMedicationDoses(
             dose: med.dose ?? "Dose not set",
             note: "Scheduled one-off dose",
           });
+          existingKeys.add(key);
         }
       }
       continue;
@@ -210,34 +214,25 @@ export async function getUpcomingMedicationDoses(
 
     if (med.schedule_type === "daily_same_time") {
       const times = (med.medication_schedule_times ?? []).map((t) => t.time_of_day);
+      const daysInWindow = Math.ceil(windowHours / 24);
       for (const time of times) {
         const [hourRaw = "00", minuteRaw = "00"] = time.split(":");
         const hour = Number(hourRaw);
         const minute = Number(minuteRaw);
         if (!Number.isFinite(hour) || !Number.isFinite(minute)) continue;
 
-        const todayCandidate = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate(),
-          hour,
-          minute,
-          0,
-          0,
-        );
-        const tomorrowCandidate = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate() + 1,
-          hour,
-          minute,
-          0,
-          0,
-        );
-
-        for (const due of [todayCandidate, tomorrowCandidate]) {
+        for (let dayOffset = 0; dayOffset <= daysInWindow; dayOffset += 1) {
+          const due = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate() + dayOffset,
+            hour,
+            minute,
+            0,
+            0,
+          );
           if (!inWindow(due)) continue;
-          const key = `${med.name.toLowerCase()}|${due.getTime()}`;
+          const key = `${med.id}|${due.getTime()}`;
           if (existingKeys.has(key)) continue;
 
           projected.push({
@@ -247,6 +242,7 @@ export async function getUpcomingMedicationDoses(
             dose: med.dose ?? "Dose not set",
             note: "Scheduled daily dose",
           });
+          existingKeys.add(key);
         }
       }
     }

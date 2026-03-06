@@ -1,6 +1,6 @@
 import { theme } from "@/src/theme";
 import React, { useEffect, useMemo, useState } from "react";
-import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import AppText from "../AppText";
 
 export type MedsDueWindowHours = 1 | 24 | 168;
@@ -22,7 +22,17 @@ type Props = {
 };
 
 function formatTime(d: Date) {
-  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const time24 = d.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const meridiem = d.toLocaleTimeString([], {
+    hour: "numeric",
+    hour12: true,
+  });
+  const suffix = meridiem.slice(-2).toUpperCase();
+  return `${time24} ${suffix}`;
 }
 
 function formatDate(d: Date) {
@@ -34,13 +44,13 @@ function formatDate(d: Date) {
 }
 
 function formatDateTime(d: Date) {
-  return d.toLocaleString([], {
+  const datePart = d.toLocaleDateString([], {
     weekday: "short",
     day: "numeric",
     month: "short",
-    hour: "numeric",
-    minute: "2-digit",
   });
+  const timePart = formatTime(d);
+  return `${datePart} ${timePart}`;
 }
 
 export default function MedsDueModal({
@@ -71,7 +81,12 @@ export default function MedsDueModal({
   );
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <AppText weight="bold" style={styles.title}>
@@ -79,22 +94,32 @@ export default function MedsDueModal({
           </AppText>
           {showWindowOptions ? (
             <View style={styles.windowOptions}>
-              {([
-                [1, "Next hour"],
-                [24, "Next 24 hours"],
-                [168, "Next 7 days"],
-              ] as [MedsDueWindowHours, string][]).map(([hours, label]) => {
+              {(
+                [
+                  [1, "Next hour"],
+                  [24, "Next 24 hours"],
+                  [168, "Next 7 days"],
+                ] as [MedsDueWindowHours, string][]
+              ).map(([hours, label]) => {
                 const active = windowHours === hours;
                 return (
                   <Pressable
                     key={hours}
-                    style={[styles.windowOption, active && styles.windowOptionActive]}
+                    style={[
+                      styles.windowOption,
+                      active && styles.windowOptionActive,
+                    ]}
                     onPress={() => {
                       onChangeWindowHours(hours);
                       setShowWindowOptions(false);
                     }}
                   >
-                    <AppText style={[styles.windowOptionText, active && styles.windowOptionTextActive]}>
+                    <AppText
+                      style={[
+                        styles.windowOptionText,
+                        active && styles.windowOptionTextActive,
+                      ]}
+                    >
                       {label}
                     </AppText>
                   </Pressable>
@@ -102,9 +127,10 @@ export default function MedsDueModal({
               })}
             </View>
           ) : null}
-          <AppText style={styles.nowText}>
-            Current: {formatDateTime(now)}
-          </AppText>
+          <View style={styles.nowRow}>
+            <AppText style={styles.nowText}>Current Date & Time: </AppText>
+            <AppText style={styles.nowValue}>{formatDateTime(now)}</AppText>
+          </View>
           <Pressable
             style={styles.windowPickerRow}
             onPress={() => setShowWindowOptions((v) => !v)}
@@ -113,11 +139,19 @@ export default function MedsDueModal({
               Time Window
             </AppText>
             <AppText style={styles.windowPickerValue}>
-              {windowHours === 1 ? "Next hour" : windowHours === 24 ? "Next 24 hours" : "Next 7 days"}
+              {windowHours === 1
+                ? "Next hour"
+                : windowHours === 24
+                  ? "Next 24 hours"
+                  : "Next 7 days"}
             </AppText>
           </Pressable>
 
-          <View style={styles.list}>
+          <ScrollView
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={true}
+          >
             {sorted.length === 0 ? (
               <View style={styles.empty}>
                 <AppText style={styles.emptyText}>
@@ -137,15 +171,19 @@ export default function MedsDueModal({
                       <AppText weight="semibold" style={styles.medName}>
                         {item.name}
                       </AppText>
-                      <AppText style={styles.dueDateText}>{formatDate(item.dueAt)}</AppText>
+                      <AppText style={styles.dueDateText}>
+                        {formatDate(item.dueAt)}
+                      </AppText>
                     </View>
                     <AppText style={styles.medDose}>{item.dose}</AppText>
-                    {item.note ? <AppText style={styles.medNote}>{item.note}</AppText> : null}
+                    {item.note ? (
+                      <AppText style={styles.medNote}>{item.note}</AppText>
+                    ) : null}
                   </View>
                 </View>
               ))
             )}
-          </View>
+          </ScrollView>
 
           <Pressable onPress={onClose} style={styles.closeBtn}>
             <AppText weight="semibold" style={styles.closeText}>
@@ -168,6 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.98)",
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
+    maxHeight: "88%",
     padding: 16,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.85)",
@@ -175,6 +214,8 @@ const styles = StyleSheet.create({
   title: {
     fontSize: theme.typography.fontSize.xl,
     color: theme.colors.text.primary,
+    marginBottom: 8,
+    textDecorationLine: "underline",
   },
   windowOptions: {
     marginTop: 8,
@@ -202,8 +243,19 @@ const styles = StyleSheet.create({
   },
   nowText: {
     marginTop: 4,
-    fontSize: theme.typography.fontSize.xs,
+    fontSize: theme.typography.fontSize.md,
     color: theme.colors.text.muted,
+  },
+  nowValue: {
+    marginTop: 4,
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.primary,
+    fontWeight: "700",
+  },
+  nowRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   windowPickerRow: {
     marginTop: 8,
@@ -219,15 +271,21 @@ const styles = StyleSheet.create({
   },
   windowPickerTitle: {
     color: theme.colors.text.primary,
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: theme.typography.fontSize.lg,
   },
   windowPickerValue: {
     color: theme.colors.brand.dark,
-    fontSize: theme.typography.fontSize.sm,
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
   list: {
     marginTop: 14,
+    maxHeight: 420,
+  },
+  listContent: {
     gap: 10,
+    paddingBottom: 8,
   },
   row: {
     flexDirection: "row",
