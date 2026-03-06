@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   CirclePlus,
   Clock3,
+  ListChecks,
   Stethoscope,
   TriangleAlert,
 } from "lucide-react-native";
@@ -395,28 +396,70 @@ export default function Appointments() {
             <ProfileHeader />
           </View>
 
-          <Card padding="md" borderActive={true} elevationActive={true}>
-            <View style={styles.summaryRow}>
-              <View style={styles.summaryItem}>
-                <Clock3 size={16} color="#1F2937" />
-                <AppText style={styles.summaryText}>
-                  Next 24h: {next24hCount}
+          <Card
+            padding="md"
+            borderActive={true}
+            elevationActive={true}
+            style={styles.heroCard}
+          >
+            <AppText weight="bold" style={styles.heroTitle}>
+              Appointment Planner
+            </AppText>
+            <AppText style={styles.heroSubtitle}>
+              Track appointments and events across daily and weekly views.
+            </AppText>
+            <View style={styles.heroMetaRow}>
+              <View style={styles.heroMetaChip}>
+                <ListChecks size={14} color={theme.colors.brand.dark} />
+                <AppText style={styles.heroMetaText}>
+                  {agendaMode === "weekly" ? "Weekly mode" : "Daily mode"}
                 </AppText>
               </View>
-              <View style={styles.summaryItem}>
-                <TriangleAlert size={16} color="#D14343" />
-                <AppText style={styles.summaryText}>
-                  Missed: {missedCount}
-                </AppText>
-              </View>
-              <View style={styles.summaryItem}>
-                <CheckCircle2 size={16} color="#2F855A" />
-                <AppText style={styles.summaryText}>
-                  Completed: {completedCount}
-                </AppText>
+              <View style={styles.heroMetaChip}>
+                <CalendarDays size={14} color={theme.colors.brand.dark} />
+                <AppText style={styles.heroMetaText}>{selectedDateKey}</AppText>
               </View>
             </View>
           </Card>
+
+          <View style={styles.metricsRow}>
+            <Card
+              padding="md"
+              borderActive={true}
+              elevationActive={true}
+              style={styles.metricCard}
+            >
+              <Clock3 size={16} color="#1F2937" />
+              <AppText weight="bold" style={styles.metricValue}>
+                {next24hCount}
+              </AppText>
+              <AppText style={styles.metricLabel}>Next 24h</AppText>
+            </Card>
+            <Card
+              padding="md"
+              borderActive={true}
+              elevationActive={true}
+              style={styles.metricCard}
+            >
+              <TriangleAlert size={16} color="#D14343" />
+              <AppText weight="bold" style={styles.metricValue}>
+                {missedCount}
+              </AppText>
+              <AppText style={styles.metricLabel}>Missed</AppText>
+            </Card>
+            <Card
+              padding="md"
+              borderActive={true}
+              elevationActive={true}
+              style={styles.metricCard}
+            >
+              <CheckCircle2 size={16} color="#2F855A" />
+              <AppText weight="bold" style={styles.metricValue}>
+                {completedCount}
+              </AppText>
+              <AppText style={styles.metricLabel}>Completed</AppText>
+            </Card>
+          </View>
 
           <Card padding="none" borderActive={true} elevationActive={true}>
             <CollapsibleCalendar
@@ -440,11 +483,13 @@ export default function Appointments() {
           </Pressable>
 
           <Card padding="md" borderActive={true} elevationActive={true}>
-            <AppText weight="semibold" style={styles.sectionTitle}>
-              {agendaMode === "weekly"
-                ? `Weekly Agenda (${formatDateKey(startOfWeek(date))} to ${formatDateKey(endOfWeek(date))})`
-                : `Daily Agenda (${selectedDateKey})`}
-            </AppText>
+            <View style={styles.sectionTitleRow}>
+              <AppText style={styles.sectionTitle}>
+                {agendaMode === "weekly"
+                  ? `Weekly Agenda (${formatDateKey(startOfWeek(date))} to ${formatDateKey(endOfWeek(date))})`
+                  : `Daily Agenda (${selectedDateKey})`}
+              </AppText>
+            </View>
 
             <View style={styles.modeWrap}>
               <Pressable
@@ -798,6 +843,57 @@ const styles = StyleSheet.create({
   headerContainer: {
     alignItems: "flex-start",
   },
+  heroCard: {
+    backgroundColor: "rgba(234,243,251,0.85)",
+    borderColor: "rgba(74,144,226,0.18)",
+  },
+  heroTitle: {
+    fontSize: theme.typography.fontSize.lg,
+  },
+  heroSubtitle: {
+    marginTop: 4,
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  heroMetaRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    gap: 8,
+  },
+  heroMetaChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.2)",
+    backgroundColor: "rgba(255,255,255,0.72)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  heroMetaText: {
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: "600",
+    color: theme.colors.brand.dark,
+  },
+  metricsRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  metricCard: {
+    flex: 1,
+    alignItems: "center",
+    minHeight: 96,
+  },
+  metricValue: {
+    marginTop: 4,
+    fontSize: theme.typography.fontSize.lg,
+  },
+  metricLabel: {
+    marginTop: 2,
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
+  },
   addAppointmentCta: {
     marginTop: 4,
     borderRadius: 14,
@@ -841,6 +937,9 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.sm,
   },
   sectionTitle: {
+    fontWeight: "700",
+  },
+  sectionTitleRow: {
     marginBottom: 10,
   },
   modeWrap: {

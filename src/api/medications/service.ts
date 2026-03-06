@@ -64,6 +64,33 @@ export type RxNormSuggestion = {
   name: string;
 };
 
+export type MedicationHistoryStatus = "taken" | "skipped" | "rejected";
+
+export type MedicationHistoryItem = {
+  id: string;
+  medicationId: string;
+  medicationName: string;
+  dose: string;
+  dueAt: Date;
+  status: MedicationHistoryStatus;
+  note?: string;
+};
+
+export type LogMedicationHistoryExceptionInput = {
+  patientId: string;
+  userId: string;
+  medicationId: string;
+  dueAt: string;
+  eventType: "skipped" | "rejected";
+  note?: string;
+};
+
+export type ClearMedicationHistoryExceptionInput = {
+  patientId: string;
+  medicationId: string;
+  dueAt: string;
+};
+
 export async function getPrimaryPatientId(userId: string) {
   const { data, error } = await supabase
     .from("patient_members")
@@ -445,4 +472,211 @@ export async function searchRxNormDrugs(
 
   const payload = (await response.json()) as RxNormSpellingPayload;
   return mapRxNormSuggestions(payload).slice(0, limit);
+}
+
+type MedicationHistoryEventRow = {
+  medication_id: string;
+  occurred_at: string;
+  event_type: "skipped" | "rejected";
+  note: string | null;
+};
+
+function parseDoseForStockDecrease(dose: string | null, stockUnit: string | null) {
+  if (!dose) return 1;
+  const match = dose.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+  if (!match) return 1;
+
+  const qty = Number(match[1]);
+  if (!Number.isFinite(qty) || qty <= 0) return 1;
+
+  const doseUnit = (match[2] || "").trim().toLowerCase();
+  const normalizedStockUnit = (stockUnit || "").trim().toLowerCase();
+  if (doseUnit && normalizedStockUnit && doseUnit !== normalizedStockUnit) {
+    return 1;
+  }
+
+  return qty;
+}
+
+export async function getMedicationHistory(
+  patientId: string,
+  lookbackDays = 7,
+  limit = 50,
+): Promise<MedicationHistoryItem[]> {
+  const now = new Date();
+  const fromDate = new Date(now.getTime() - lookbackDays * 24 * 60 * 60 * 1000);
+  const nowIso = now.toISOString();
+  const fromIso = fromDate.toISOString();
+
+  const medicationQuery = supabase
+    .from("medications")
+    .select(
+      "id,name,dose,stock_unit,one_off_due_at,schedule_type,medication_schedule_times(time_of_day)",
+    )
+    .eq("patient_id", patientId)
+    .eq("active", true)
+    .in("schedule_type", ["daily_same_time", "one_off"]);
+
+  type MedicationWithSchedule = QueryData<typeof medicationQuery>[number];
+  const { data: medicationRows, error: medicationError } = await medicationQuery;
+  if (medicationError) throw medicationError;
+
+  const adherenceQuery = supabase
+    .from("medication_adherence_events" as any)
+    .select("medication_id,occurred_at,event_type,note")
+    .eq("patient_id", patientId)
+    .gte("occurred_at", fromIso)
+    .lte("occurred_at", nowIso)
+    .order("occurred_at", { ascending: false })
+    .limit(1000);
+
+  const { data: eventRows, error: eventError } = await adherenceQuery;
+  if (eventError) throw eventError;
+
+  const eventByKey = new Map<string, MedicationHistoryEventRow>();
+  for (const row of ((eventRows ?? []) as unknown as MedicationHistoryEventRow[])) {
+    const key = `${row.medication_id}|${new Date(row.occurred_at).getTime()}`;
+    eventByKey.set(key, {
+      medication_id: row.medication_id,
+      occurred_at: row.occurred_at,
+      event_type: row.event_type,
+      note: row.note ?? null,
+    });
+  }
+
+  const history: MedicationHistoryItem[] = [];
+
+  for (const med of (medicationRows ?? []) as MedicationWithSchedule[]) {
+    if (med.schedule_type === "one_off" && med.one_off_due_at) {
+      const due = new Date(med.one_off_due_at);
+      if (due >= fromDate && due <= now) {
+        const key = `${med.id}|${due.getTime()}`;
+        const event = eventByKey.get(key);
+        history.push({
+          id: `history-oneoff-${med.id}-${due.toISOString()}`,
+          medicationId: med.id,
+          medicationName: med.name,
+          dose: med.dose ?? "Dose not set",
+          dueAt: due,
+          status: event?.event_type ?? "taken",
+          note: event?.note ?? undefined,
+        });
+      }
+      continue;
+    }
+
+    if (med.schedule_type === "daily_same_time") {
+      const times = (med.medication_schedule_times ?? []).map((t) => t.time_of_day);
+      for (const time of times) {
+        const [hourRaw = "00", minuteRaw = "00"] = time.split(":");
+        const hour = Number(hourRaw);
+        const minute = Number(minuteRaw);
+        if (!Number.isFinite(hour) || !Number.isFinite(minute)) continue;
+
+        for (let dayOffset = 0; dayOffset <= lookbackDays; dayOffset += 1) {
+          const due = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate() - dayOffset,
+            hour,
+            minute,
+            0,
+            0,
+          );
+          if (due < fromDate || due > now) continue;
+
+          const key = `${med.id}|${due.getTime()}`;
+          const event = eventByKey.get(key);
+          history.push({
+            id: `history-daily-${med.id}-${time}-${due.toISOString()}`,
+            medicationId: med.id,
+            medicationName: med.name,
+            dose: med.dose ?? "Dose not set",
+            dueAt: due,
+            status: event?.event_type ?? "taken",
+            note: event?.note ?? undefined,
+          });
+        }
+      }
+    }
+  }
+
+  return history
+    .sort((a, b) => b.dueAt.getTime() - a.dueAt.getTime())
+    .slice(0, limit);
+}
+
+export async function logMedicationHistoryException({
+  patientId,
+  userId,
+  medicationId,
+  dueAt,
+  eventType,
+  note,
+}: LogMedicationHistoryExceptionInput): Promise<void> {
+  const dueDate = new Date(dueAt);
+  if (Number.isNaN(dueDate.getTime())) {
+    throw new Error("Invalid due date.");
+  }
+
+  const { error: eventError } = await supabase
+    .from("medication_adherence_events" as any)
+    .upsert(
+      {
+        patient_id: patientId,
+        medication_id: medicationId,
+        occurred_at: dueDate.toISOString(),
+        event_type: eventType,
+        note: note?.trim() || null,
+        created_by: userId,
+      },
+      {
+        onConflict: "medication_id,occurred_at",
+      },
+    );
+  if (eventError) throw eventError;
+
+  if (eventType !== "rejected") return;
+
+  const { data: medication, error: medicationError } = await supabase
+    .from("medications")
+    .select("id,stock_quantity,stock_unit,dose")
+    .eq("id", medicationId)
+    .maybeSingle();
+  if (medicationError) throw medicationError;
+  if (!medication || medication.stock_quantity == null) return;
+
+  const decrement = parseDoseForStockDecrease(
+    medication.dose ?? null,
+    medication.stock_unit ?? null,
+  );
+  const nextStock = Math.max(0, medication.stock_quantity - decrement);
+
+  const { error: updateError } = await supabase
+    .from("medications")
+    .update({
+      stock_quantity: nextStock,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", medicationId);
+  if (updateError) throw updateError;
+}
+
+export async function clearMedicationHistoryException({
+  patientId,
+  medicationId,
+  dueAt,
+}: ClearMedicationHistoryExceptionInput): Promise<void> {
+  const dueDate = new Date(dueAt);
+  if (Number.isNaN(dueDate.getTime())) {
+    throw new Error("Invalid due date.");
+  }
+
+  const { error } = await supabase
+    .from("medication_adherence_events" as any)
+    .delete()
+    .eq("patient_id", patientId)
+    .eq("medication_id", medicationId)
+    .eq("occurred_at", dueDate.toISOString());
+  if (error) throw error;
 }

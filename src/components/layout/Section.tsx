@@ -1,5 +1,5 @@
 // Section.tsx
-import React, { PropsWithChildren, ReactNode, useState } from "react";
+import React, { PropsWithChildren, ReactNode, RefObject, useState } from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
 type SectionProps = PropsWithChildren<{
@@ -7,6 +7,7 @@ type SectionProps = PropsWithChildren<{
   scrollEnabled?: boolean;
   onRefresh?: () => void | Promise<void>;
   pullToRefreshEnabled?: boolean;
+  scrollRef?: RefObject<ScrollView | null>;
 }>;
 
 export default function Section({
@@ -15,6 +16,7 @@ export default function Section({
   scrollEnabled = true,
   onRefresh,
   pullToRefreshEnabled = true,
+  scrollRef,
 }: SectionProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -46,6 +48,7 @@ export default function Section({
       {/* Scrollable content area */}
       {scrollEnabled ? (
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
           refreshControl={

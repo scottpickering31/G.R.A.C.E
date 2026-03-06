@@ -1,12 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  clearMedicationHistoryException,
+  ClearMedicationHistoryExceptionInput,
   createMedication,
   CreateMedicationInput,
   deleteMedication,
+  getMedicationHistory,
   getMedications,
   getPrimaryPatient,
   getPrimaryPatientId,
   getUpcomingMedicationDoses,
+  logMedicationHistoryException,
+  LogMedicationHistoryExceptionInput,
   searchRxNormDrugs,
   updateMedication,
   UpdateMedicationInput,
@@ -43,6 +48,15 @@ export function useMedications(patientId?: string) {
   return useQuery({
     queryKey: ["medications", patientId],
     queryFn: () => getMedications(patientId!),
+    enabled: !!patientId,
+    staleTime: 20_000,
+  });
+}
+
+export function useMedicationHistory(patientId?: string, lookbackDays = 7) {
+  return useQuery({
+    queryKey: ["medication-history", patientId, lookbackDays],
+    queryFn: () => getMedicationHistory(patientId!, lookbackDays),
     enabled: !!patientId,
     staleTime: 20_000,
   });
@@ -90,6 +104,36 @@ export function useDeleteMedication(patientId?: string) {
     mutationFn: (medicationId: string) => deleteMedication(medicationId),
     onSuccess: () => {
       if (!patientId) return;
+      qc.invalidateQueries({ queryKey: ["medications", patientId] });
+      qc.invalidateQueries({ queryKey: ["upcoming-med-doses", patientId] });
+    },
+  });
+}
+
+export function useLogMedicationHistoryException(patientId?: string) {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: LogMedicationHistoryExceptionInput) =>
+      logMedicationHistoryException(input),
+    onSuccess: () => {
+      if (!patientId) return;
+      qc.invalidateQueries({ queryKey: ["medication-history", patientId] });
+      qc.invalidateQueries({ queryKey: ["medications", patientId] });
+      qc.invalidateQueries({ queryKey: ["upcoming-med-doses", patientId] });
+    },
+  });
+}
+
+export function useClearMedicationHistoryException(patientId?: string) {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: ClearMedicationHistoryExceptionInput) =>
+      clearMedicationHistoryException(input),
+    onSuccess: () => {
+      if (!patientId) return;
+      qc.invalidateQueries({ queryKey: ["medication-history", patientId] });
       qc.invalidateQueries({ queryKey: ["medications", patientId] });
       qc.invalidateQueries({ queryKey: ["upcoming-med-doses", patientId] });
     },

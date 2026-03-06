@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       appointments: {
         Row: {
+          appointment_date: string
           appointment_type: string
           clinician: string | null
           completed: boolean
@@ -33,6 +34,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          appointment_date: string
           appointment_type?: string
           clinician?: string | null
           completed?: boolean
@@ -50,6 +52,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          appointment_date?: string
           appointment_type?: string
           clinician?: string | null
           completed?: boolean
@@ -69,6 +72,54 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medication_adherence_events: {
+        Row: {
+          created_at: string
+          created_by: string
+          event_type: Database["public"]["Enums"]["medication_adherence_event_type"]
+          id: string
+          medication_id: string
+          note: string | null
+          occurred_at: string
+          patient_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          event_type: Database["public"]["Enums"]["medication_adherence_event_type"]
+          id?: string
+          medication_id: string
+          note?: string | null
+          occurred_at: string
+          patient_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          event_type?: Database["public"]["Enums"]["medication_adherence_event_type"]
+          id?: string
+          medication_id?: string
+          note?: string | null
+          occurred_at?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medication_adherence_events_medication_id_fkey"
+            columns: ["medication_id"]
+            isOneToOne: false
+            referencedRelation: "medications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medication_adherence_events_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
@@ -327,6 +378,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      medication_adherence_event_type: "skipped" | "rejected"
       medication_dose_status: "pending" | "taken" | "skipped" | "missed"
       medication_route:
         | "oral"
@@ -476,6 +528,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      medication_adherence_event_type: ["skipped", "rejected"],
       medication_dose_status: ["pending", "taken", "skipped", "missed"],
       medication_route: [
         "oral",

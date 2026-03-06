@@ -54,7 +54,10 @@ export default function Dashboard() {
     usePrimaryPatientId(userId);
   const { data: upcomingMedsData, refetch: refetchUpcomingMeds } =
     useUpcomingMedicationDoses(primaryPatientId ?? undefined, medsWindowHours);
+  const { data: nextHourMedsData, refetch: refetchNextHourMeds } =
+    useUpcomingMedicationDoses(primaryPatientId ?? undefined, 1);
   const sortedMeds: UpcomingMedication[] = upcomingMedsData ?? [];
+  const nextHourMedsCount = nextHourMedsData?.length ?? 0;
   const nextDue = sortedMeds[0];
   const nextDueLabel = nextDue
     ? format24HourWithMeridiem(nextDue.dueAt)
@@ -79,6 +82,7 @@ export default function Dashboard() {
           onRefresh={async () => {
             await refetchPrimaryPatient();
             await refetchUpcomingMeds();
+            await refetchNextHourMeds();
           }}
         >
           <View style={styles.headerRow}>
@@ -94,15 +98,13 @@ export default function Dashboard() {
             <AppText weight="bold" style={styles.heroTitle}>
               Today&apos;s Care Dashboard
             </AppText>
-            <AppText style={styles.heroSubtitle}>{medsDueSubtitle}</AppText>
+            <AppText style={styles.heroSubtitle}>
+              Next Med Due: <AppText weight="bold">{medsDueSubtitle}</AppText>
+            </AppText>
             <View style={styles.heroMetaRow}>
               <View style={styles.heroMetaChip}>
                 <Clock size={14} color={theme.colors.brand.dark} />
                 <AppText style={styles.heroMetaText}>{nextDueLabel}</AppText>
-              </View>
-              <View style={styles.heroMetaChip}>
-                <Pill size={14} color={theme.colors.brand.dark} />
-                <AppText style={styles.heroMetaText}>{medsWindowLabel}</AppText>
               </View>
             </View>
           </Card>
@@ -114,9 +116,9 @@ export default function Dashboard() {
               padding="md"
               style={styles.metricCard}
             >
-              <AppText style={styles.metricLabel}>Due Now</AppText>
+              <AppText style={styles.metricLabel}>Due in next hour</AppText>
               <AppText weight="bold" style={styles.metricValue}>
-                {sortedMeds.length}
+                {nextHourMedsCount}
               </AppText>
               <AppText style={styles.metricSubLabel}>Medications</AppText>
             </Card>

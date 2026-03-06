@@ -77,6 +77,40 @@ function daysUntil(dateIso: string | null) {
   return Math.round((targetDate.getTime() - today.getTime()) / 86_400_000);
 }
 
+function estimateRunout(med: MedicationListItem) {
+  if (med.schedule_type !== "daily_same_time") {
+    return "Run-out estimate available for daily schedules only.";
+  }
+  if (med.stock_quantity == null || med.stock_quantity <= 0) {
+    return "Add current stock to estimate run-out date.";
+  }
+  if (!med.dose) return "Add dose amount to estimate run-out date.";
+  if (med.schedule_times.length === 0) {
+    return "Add daily times to estimate run-out date.";
+  }
+
+  const doseMatch = med.dose.match(/^(\d+(?:\.\d+)?)\s*(.*)$/);
+  if (!doseMatch) return "Dose format not recognized for estimate.";
+
+  const doseQuantity = Number(doseMatch[1]);
+  if (!Number.isFinite(doseQuantity) || doseQuantity <= 0) {
+    return "Dose must be greater than 0 to estimate run-out date.";
+  }
+
+  const doseUnit = (doseMatch[2] || "").trim().toLowerCase();
+  const stockUnit = (med.stock_unit || "").trim().toLowerCase();
+  if (doseUnit && stockUnit && doseUnit !== stockUnit) {
+    return "Dose and stock units differ, estimate unavailable.";
+  }
+
+  const usagePerDay = doseQuantity * med.schedule_times.length;
+  if (usagePerDay <= 0) return "Usage per day is not valid.";
+
+  const daysRemaining = med.stock_quantity / usagePerDay;
+  const runoutDate = new Date(Date.now() + daysRemaining * 86_400_000);
+  return `Estimated run-out: ${runoutDate.toLocaleDateString()} (${Math.max(0, Math.floor(daysRemaining))} days left)`;
+}
+
 export default function Stock() {
   const [filter, setFilter] = useState<StockFilter>("all");
   const [showOnlyExpiring, setShowOnlyExpiring] = useState(false);
@@ -165,11 +199,16 @@ export default function Stock() {
             <ProfileHeader style={{ width: "58%" }} />
           </View>
 
-          <Card padding="md" borderActive={true} elevationActive={true}>
-            <AppText weight="semibold" style={styles.title}>
+          <Card
+            padding="md"
+            borderActive={true}
+            elevationActive={true}
+            style={styles.heroCard}
+          >
+            <AppText weight="bold" style={styles.heroTitle}>
               Stock Control
             </AppText>
-            <AppText style={styles.subtitle}>
+            <AppText style={styles.heroSubtitle}>
               Live inventory pulled from medication records and stock values.
             </AppText>
           </Card>
@@ -242,6 +281,9 @@ export default function Stock() {
                           item.low_stock_threshold,
                           item.stock_unit,
                         )}
+                      </AppText>
+                      <AppText style={styles.runoutText}>
+                        {estimateRunout(item)}
                       </AppText>
                     </View>
                     <View
@@ -374,7 +416,7 @@ export default function Stock() {
 
                     <View style={styles.rowBottom}>
                       <AppText style={styles.rowMeta}>
-                        Low Capacity Threshold:{" "}
+                        Threshold:{" "}
                         {formatQuantity(
                           item.low_stock_threshold,
                           item.stock_unit,
@@ -384,6 +426,9 @@ export default function Stock() {
                         Expiry: {formatDateLabel(item.expires_at)}
                       </AppText>
                     </View>
+                    <AppText style={styles.runoutText}>
+                      {estimateRunout(item)}
+                    </AppText>
                   </Pressable>
                 );
               })
@@ -469,10 +514,14 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.xs,
     fontWeight: "600",
   },
-  title: {
-    fontSize: theme.typography.fontSize.md,
+  heroCard: {
+    backgroundColor: "rgba(234,243,251,0.85)",
+    borderColor: "rgba(74,144,226,0.18)",
   },
-  subtitle: {
+  heroTitle: {
+    fontSize: theme.typography.fontSize.lg,
+  },
+  heroSubtitle: {
     marginTop: 4,
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.sm,
@@ -551,6 +600,12 @@ const styles = StyleSheet.create({
   rowMeta: {
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.xs,
+  },
+  runoutText: {
+    marginTop: 3,
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: "700",
   },
   levelBadge: {
     borderRadius: 999,
