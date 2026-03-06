@@ -18,6 +18,7 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      backBehavior="history"
       screenOptions={{
         headerShown: true,
         headerLeft: () => <BackToHomeButton />,
@@ -155,6 +156,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="(pages)/patient-profiles"
         options={{ href: null, title: "Patient Profiles" }}
+      />
+      <Tabs.Screen
+        name="(pages)/patient-profile/[patientId]"
+        options={{ href: null, title: "Patient Profile" }}
       />
       <Tabs.Screen
         name="(pages)/medical-plans"

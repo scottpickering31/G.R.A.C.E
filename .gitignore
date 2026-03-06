@@ -51,4 +51,5 @@ appointments_schema.sql
 appointments_seed.sql
 schemainfo.sql
 appointments_schema_update_add_appointment_date.sql
+patient_profiles_schema_update_active_patient.sql
 notes.md

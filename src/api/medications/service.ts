@@ -26,6 +26,23 @@ export type PrimaryPatient = {
   dob: string | null;
 };
 
+export type AccessiblePatient = {
+  id: string;
+  display_name: string;
+  dob: string | null;
+  role: Database["public"]["Enums"]["patient_role"];
+  isActive: boolean;
+};
+
+export type PatientProfileDetails = {
+  id: string;
+  display_name: string;
+  dob: string | null;
+  sex: string | null;
+  role: Database["public"]["Enums"]["patient_role"];
+  isActive: boolean;
+};
+
 export type CreateMedicationInput = {
   patientId: string;
   userId: string;
@@ -91,7 +108,51 @@ export type ClearMedicationHistoryExceptionInput = {
   dueAt: string;
 };
 
+export type SetActivePatientInput = {
+  userId: string;
+  patientId: string;
+};
+
+function isMissingActivePatientColumnError(error: any) {
+  if (!error) return false;
+  if (error.code === "PGRST204") return true;
+  if (typeof error.message === "string" && error.message.includes("active_patient_id")) {
+    return true;
+  }
+  return false;
+}
+
+async function getStoredActivePatientId(userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("active_patient_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingActivePatientColumnError(error)) return null;
+    throw error;
+  }
+
+  return data?.active_patient_id ?? null;
+}
+
 export async function getPrimaryPatientId(userId: string) {
+  const storedActivePatientId = await getStoredActivePatientId(userId);
+
+  if (storedActivePatientId) {
+    const { data: membership, error: membershipError } = await supabase
+      .from("patient_members")
+      .select("patient_id")
+      .eq("user_id", userId)
+      .eq("patient_id", storedActivePatientId)
+      .limit(1)
+      .maybeSingle();
+
+    if (membershipError) throw membershipError;
+    if (membership?.patient_id) return membership.patient_id;
+  }
+
   const { data, error } = await supabase
     .from("patient_members")
     .select("patient_id")
@@ -106,11 +167,14 @@ export async function getPrimaryPatientId(userId: string) {
 }
 
 export async function getPrimaryPatient(userId: string): Promise<PrimaryPatient | null> {
+  const activePatientId = await getPrimaryPatientId(userId);
+  if (!activePatientId) return null;
+
   const query = supabase
     .from("patient_members")
-    .select("patient:patients(id,display_name,dob)")
+    .select("patient:patients(id,display_name,dob),patient_id")
     .eq("user_id", userId)
-    .order("created_at", { ascending: true })
+    .eq("patient_id", activePatientId)
     .limit(1)
     .maybeSingle();
 
@@ -129,6 +193,127 @@ export async function getPrimaryPatient(userId: string): Promise<PrimaryPatient 
     display_name: patient.display_name,
     dob: patient.dob,
   };
+}
+
+export async function getAccessiblePatients(
+  userId: string,
+): Promise<AccessiblePatient[]> {
+  const activePatientId = await getPrimaryPatientId(userId);
+
+  const query = supabase
+    .from("patient_members")
+    .select("role,patient:patients(id,display_name,dob)")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+
+  type PatientMemberWithJoin = QueryData<typeof query>[number];
+  const { data, error } = await query;
+
+  if (error) throw error;
+
+  return (data ?? [])
+    .map((row: PatientMemberWithJoin) => {
+      const patient = Array.isArray(row.patient) ? row.patient[0] : row.patient;
+      if (!patient) return null;
+      return {
+        id: patient.id,
+        display_name: patient.display_name,
+        dob: patient.dob,
+        role: row.role,
+        isActive: patient.id === activePatientId,
+      };
+    })
+    .filter((item): item is AccessiblePatient => item != null);
+}
+
+export async function getPatientProfileDetails(
+  userId: string,
+  patientId: string,
+): Promise<PatientProfileDetails | null> {
+  const activePatientId = await getPrimaryPatientId(userId);
+
+  const query = supabase
+    .from("patient_members")
+    .select("role,patient:patients(id,display_name,dob,sex)")
+    .eq("user_id", userId)
+    .eq("patient_id", patientId)
+    .limit(1)
+    .maybeSingle();
+
+  type PatientDetailsJoin = QueryData<typeof query>;
+  const { data, error } = await query;
+
+  if (error) throw error;
+  if (!data) return null;
+
+  const row = data as NonNullable<PatientDetailsJoin>;
+  const patient = Array.isArray(row.patient) ? row.patient[0] : row.patient;
+  if (!patient) return null;
+
+  return {
+    id: patient.id,
+    display_name: patient.display_name,
+    dob: patient.dob,
+    sex: patient.sex,
+    role: row.role,
+    isActive: patient.id === activePatientId,
+  };
+}
+
+export async function setActivePatient({
+  userId,
+  patientId,
+}: SetActivePatientInput): Promise<void> {
+  const { data: membership, error: membershipError } = await supabase
+    .from("patient_members")
+    .select("patient_id")
+    .eq("user_id", userId)
+    .eq("patient_id", patientId)
+    .limit(1)
+    .maybeSingle();
+
+  if (membershipError) throw membershipError;
+  if (!membership) {
+    throw new Error("You do not have access to this patient profile.");
+  }
+
+  const nowIso = new Date().toISOString();
+
+  const { data: updatedRow, error: updateError } = await supabase
+    .from("profiles")
+    .update({
+      active_patient_id: patientId,
+      updated_at: nowIso,
+    } as any)
+    .eq("id", userId)
+    .select("id")
+    .maybeSingle();
+
+  if (!updateError && updatedRow) return;
+  if (isMissingActivePatientColumnError(updateError)) {
+    throw new Error(
+      "Database is missing profiles.active_patient_id. Run the schema update before setting active patients.",
+    );
+  }
+
+  const { error: upsertError } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: userId,
+        active_patient_id: patientId,
+        updated_at: nowIso,
+      } as any,
+      { onConflict: "id" },
+    );
+  if (upsertError) {
+    if (isMissingActivePatientColumnError(upsertError)) {
+      throw new Error(
+        "Database is missing profiles.active_patient_id. Run the schema update before setting active patients.",
+      );
+    }
+    throw upsertError;
+  }
 }
 
 export async function getMedications(

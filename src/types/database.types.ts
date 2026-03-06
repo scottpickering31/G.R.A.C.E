@@ -339,6 +339,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          active_patient_id: string | null
           avatar_url: string | null
           email: string | null
           full_name: string | null
@@ -349,6 +350,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          active_patient_id?: string | null
           avatar_url?: string | null
           email?: string | null
           full_name?: string | null
@@ -359,6 +361,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          active_patient_id?: string | null
           avatar_url?: string | null
           email?: string | null
           full_name?: string | null
@@ -368,7 +371,15 @@ export type Database = {
           username?: string | null
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_active_patient_id_fkey"
+            columns: ["active_patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

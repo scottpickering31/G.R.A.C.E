@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AccessiblePatient,
   clearMedicationHistoryException,
   ClearMedicationHistoryExceptionInput,
   createMedication,
@@ -7,12 +8,17 @@ import {
   deleteMedication,
   getMedicationHistory,
   getMedications,
+  getAccessiblePatients,
+  getPatientProfileDetails,
   getPrimaryPatient,
   getPrimaryPatientId,
+  setActivePatient,
   getUpcomingMedicationDoses,
   logMedicationHistoryException,
   LogMedicationHistoryExceptionInput,
+  PatientProfileDetails,
   searchRxNormDrugs,
+  SetActivePatientInput,
   updateMedication,
   UpdateMedicationInput,
 } from "./service";
@@ -32,6 +38,24 @@ export function usePrimaryPatient(userId?: string) {
     queryFn: () => getPrimaryPatient(userId!),
     enabled: !!userId,
     staleTime: 60_000,
+  });
+}
+
+export function useAccessiblePatients(userId?: string) {
+  return useQuery<AccessiblePatient[]>({
+    queryKey: ["accessible-patients", userId],
+    queryFn: () => getAccessiblePatients(userId!),
+    enabled: !!userId,
+    staleTime: 60_000,
+  });
+}
+
+export function usePatientProfileDetails(userId?: string, patientId?: string) {
+  return useQuery<PatientProfileDetails | null>({
+    queryKey: ["patient-profile-details", userId, patientId],
+    queryFn: () => getPatientProfileDetails(userId!, patientId!),
+    enabled: !!userId && !!patientId,
+    staleTime: 30_000,
   });
 }
 
@@ -136,6 +160,24 @@ export function useClearMedicationHistoryException(patientId?: string) {
       qc.invalidateQueries({ queryKey: ["medication-history", patientId] });
       qc.invalidateQueries({ queryKey: ["medications", patientId] });
       qc.invalidateQueries({ queryKey: ["upcoming-med-doses", patientId] });
+    },
+  });
+}
+
+export function useSetActivePatient(userId?: string) {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: SetActivePatientInput) => setActivePatient(input),
+    onSuccess: () => {
+      if (!userId) return;
+      qc.invalidateQueries({ queryKey: ["accessible-patients", userId] });
+      qc.invalidateQueries({ queryKey: ["primary-patient-id", userId] });
+      qc.invalidateQueries({ queryKey: ["primary-patient", userId] });
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["medications"] });
+      qc.invalidateQueries({ queryKey: ["upcoming-med-doses"] });
+      qc.invalidateQueries({ queryKey: ["medication-history"] });
     },
   });
 }
