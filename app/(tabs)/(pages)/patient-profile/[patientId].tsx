@@ -8,10 +8,13 @@ import { useAuthStore } from "@/src/state/auth.store";
 import { useUIStore } from "@/state/ui.store";
 import { theme } from "@/src/theme";
 import * as Clipboard from "expo-clipboard";
+import { useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import {
   CalendarDays,
   Copy,
+  Eye,
+  EyeOff,
   Send,
   ShieldCheck,
   UserRound,
@@ -48,6 +51,7 @@ function buildPatientAccessCode(patientId: string) {
 export default function PatientProfileDetailsPage() {
   const userId = useAuthStore((s) => s.session?.user.id);
   const { showToast } = useUIStore();
+  const [showSecretCode, setShowSecretCode] = useState(false);
   const params = useLocalSearchParams<{ patientId?: string | string[] }>();
   const patientId = Array.isArray(params.patientId)
     ? params.patientId[0]
@@ -124,9 +128,21 @@ export default function PatientProfileDetailsPage() {
                 Care Team & Access
               </AppText>
               <View style={styles.secretCodeWrap}>
-                <AppText style={styles.secretLabel}>Patient Secret Code</AppText>
+                <View style={styles.secretHeaderRow}>
+                  <AppText style={styles.secretLabel}>Patient Secret Code</AppText>
+                  <Pressable
+                    style={styles.secretEyeBtn}
+                    onPress={() => setShowSecretCode((prev) => !prev)}
+                  >
+                    {showSecretCode ? (
+                      <EyeOff size={15} color={theme.colors.text.secondary} />
+                    ) : (
+                      <Eye size={15} color={theme.colors.text.secondary} />
+                    )}
+                  </Pressable>
+                </View>
                 <AppText selectable={true} style={styles.secretValue}>
-                  {patientAccessCode}
+                  {showSecretCode ? patientAccessCode : "●●●●-●●●●-●●●●"}
                 </AppText>
                 <AppText style={styles.helperText}>
                   Share this code with family or clinicians for read-only access.
@@ -238,6 +254,19 @@ const styles = StyleSheet.create({
     borderColor: "rgba(74,144,226,0.20)",
     backgroundColor: "rgba(74,144,226,0.07)",
     padding: 10,
+  },
+  secretHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  secretEyeBtn: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.12)",
+    backgroundColor: "rgba(255,255,255,0.75)",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
   },
   secretLabel: {
     color: theme.colors.text.secondary,
