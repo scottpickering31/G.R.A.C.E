@@ -9,13 +9,16 @@ import Card from "@/src/components/layout/Card";
 import ListBlock from "@/src/components/layout/ListBlock";
 import Screen from "@/src/components/layout/Screen";
 import AddMedicationModal from "@/src/components/medications/AddMedicationModal";
+import MedicationDetailModal from "@/src/components/medications/MedicationDetailModal";
 import MedsDueModal, {
+  MedsDueWindowHours,
   UpcomingMedication,
 } from "@/src/components/medications/MedsDueModal";
 import ProfileHeader from "@/src/components/profile/ProfileHeader";
 import { useAuthStore } from "@/src/state/auth.store";
+import { MedicationListItem } from "@/src/api/medications/service";
 import { AlarmClock, Pill, PillBottle, Plus } from "lucide-react-native";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 function formatSchedule(
@@ -52,17 +55,34 @@ function formatRoute(route: string) {
   return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
 }
 
+function formatWindowLabel(hours: MedsDueWindowHours) {
+  if (hours === 1) return "In the next hour";
+  if (hours === 24) return "In the next 24 hours";
+  return "In the next 7 days";
+}
+
 export default function MedicationsTreatments() {
   const [showMedsDue, setShowMedsDue] = useState(false);
   const [showAddMedication, setShowAddMedication] = useState(false);
+  const [selectedMedication, setSelectedMedication] = useState<MedicationListItem | null>(null);
+  const [medsWindowHours, setMedsWindowHours] = useState<MedsDueWindowHours>(24);
 
   const userId = useAuthStore((s) => s.session?.user.id);
-  const { data: primaryPatientId } = usePrimaryPatientId(userId);
-  const { data: upcomingMedsData } = useUpcomingMedicationDoses(primaryPatientId ?? undefined);
-  const { data: medicationsData } = useMedications(primaryPatientId ?? undefined);
+  const { data: primaryPatientId, refetch: refetchPrimaryPatient } = usePrimaryPatientId(userId);
+  const { data: upcomingMedsData, refetch: refetchUpcomingMeds } =
+    useUpcomingMedicationDoses(primaryPatientId ?? undefined, medsWindowHours);
+  const { data: medicationsData, refetch: refetchMedications } =
+    useMedications(primaryPatientId ?? undefined);
 
   const upcomingMeds: UpcomingMedication[] = upcomingMedsData ?? [];
-  const medications = medicationsData ?? [];
+  const medications = useMemo(() => medicationsData ?? [], [medicationsData]);
+
+  useEffect(() => {
+    if (!selectedMedication) return;
+    const updated = medications.find((m) => m.id === selectedMedication.id) ?? null;
+    if (!updated || updated === selectedMedication) return;
+    setSelectedMedication(updated);
+  }, [medications, selectedMedication]);
 
   const nextDueLabel = (() => {
     if (!upcomingMeds.length) return "No upcoming doses";
@@ -75,7 +95,13 @@ export default function MedicationsTreatments() {
       screenBackground={require("@/assets/images/clouds.png")}
       useSafeArea={false}
     >
-      <Section>
+      <Section
+        onRefresh={async () => {
+          await refetchPrimaryPatient();
+          await refetchUpcomingMeds();
+          await refetchMedications();
+        }}
+      >
         <ProfileHeader />
 
         <Card padding="cardInset" borderActive={true} elevationActive={true}>
@@ -92,7 +118,7 @@ export default function MedicationsTreatments() {
             Icon={PillBottle}
             iconBgColor="rgba(74, 144, 226, 0.18)"
             title="Meds Due"
-            subtitle={nextDueLabel}
+            subtitle={`${formatWindowLabel(medsWindowHours)} • ${nextDueLabel}`}
             rightText={`${upcomingMeds.length} upcoming`}
             showChevron={false}
             onPress={() => setShowMedsDue(true)}
@@ -136,7 +162,8 @@ export default function MedicationsTreatments() {
                 title={med.name}
                 subtitle={`${formatSchedule(med.schedule_type, med.schedule_times, med.one_off_due_at)} • ${formatRoute(med.route)}${med.instructions ? ` • ${med.instructions}` : ""}`}
                 rightText={`${med.dose ?? "Dose not set"} • ${formatStock(med.stock_quantity, med.stock_unit)}`}
-                showChevron={false}
+                showChevron={true}
+                onPress={() => setSelectedMedication(med)}
               />
             ))
           )}
@@ -146,12 +173,20 @@ export default function MedicationsTreatments() {
           visible={showMedsDue}
           onClose={() => setShowMedsDue(false)}
           items={upcomingMeds}
+          windowHours={medsWindowHours}
+          onChangeWindowHours={setMedsWindowHours}
         />
         <AddMedicationModal
           visible={showAddMedication}
           onClose={() => setShowAddMedication(false)}
           patientId={primaryPatientId ?? undefined}
           userId={userId}
+        />
+        <MedicationDetailModal
+          visible={!!selectedMedication}
+          onClose={() => setSelectedMedication(null)}
+          medication={selectedMedication}
+          patientId={primaryPatientId ?? undefined}
         />
       </Section>
     </Screen>

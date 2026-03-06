@@ -5,6 +5,7 @@ import {
   ImageStyle,
   Pressable,
   StyleSheet,
+  Text,
   View,
   ViewStyle,
 } from "react-native";
@@ -27,6 +28,7 @@ type AvatarImageProps = {
   Icon?: IconComponentType;
   iconSize?: number;
   iconColor?: string;
+  initials?: string;
 
   outerStyle?: ViewStyle;
   innerStyle?: ViewStyle;
@@ -44,6 +46,7 @@ export default function AvatarImage({
   Icon,
   iconSize,
   iconColor = "#4A90E2",
+  initials,
   outerStyle,
   innerStyle,
   imageStyle,
@@ -89,6 +92,10 @@ export default function AvatarImage({
               size={iconSize ?? Math.round(size * 0.55)}
               color={iconColor}
             />
+          ) : initials ? (
+            <Text style={[styles.initials, { fontSize: Math.round(size * 0.34) }]}>
+              {initials}
+            </Text>
           ) : null}
         </View>
       </View>
@@ -109,6 +116,11 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
+  },
+  initials: {
+    color: "#1F2D3D",
+    fontWeight: "700",
+    textTransform: "uppercase",
   },
   shadow: {
     // iOS

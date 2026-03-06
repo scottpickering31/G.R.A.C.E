@@ -10,6 +10,7 @@ import {
 import AppText from "@/src/components/AppText";
 import CurrentTime from "@/src/components/calendar/CurrentTime";
 import MedsDueModal, {
+  MedsDueWindowHours,
   UpcomingMedication,
 } from "@/src/components/medications/MedsDueModal";
 import ProfileHeader from "@/src/components/profile/ProfileHeader";
@@ -32,9 +33,11 @@ import { View } from "react-native";
 
 export default function Dashboard() {
   const [showMedsDue, setShowMedsDue] = useState(false);
+  const [medsWindowHours, setMedsWindowHours] = useState<MedsDueWindowHours>(24);
   const userId = useAuthStore((s) => s.session?.user.id);
-  const { data: primaryPatientId } = usePrimaryPatientId(userId);
-  const { data: upcomingMedsData } = useUpcomingMedicationDoses(primaryPatientId ?? undefined);
+  const { data: primaryPatientId, refetch: refetchPrimaryPatient } = usePrimaryPatientId(userId);
+  const { data: upcomingMedsData, refetch: refetchUpcomingMeds } =
+    useUpcomingMedicationDoses(primaryPatientId ?? undefined, medsWindowHours);
   const sortedMeds: UpcomingMedication[] = upcomingMedsData ?? [];
   const nextDue = sortedMeds[0];
   const nextDueLabel = nextDue
@@ -46,7 +49,12 @@ export default function Dashboard() {
       screenBackground={require("@/assets/images/clouds.png")}
       useSafeArea={false}
     >
-      <Section>
+      <Section
+        onRefresh={async () => {
+          await refetchPrimaryPatient();
+          await refetchUpcomingMeds();
+        }}
+      >
         <View
           style={{
             flexDirection: "row",
@@ -212,6 +220,8 @@ export default function Dashboard() {
           visible={showMedsDue}
           onClose={() => setShowMedsDue(false)}
           items={sortedMeds}
+          windowHours={medsWindowHours}
+          onChangeWindowHours={setMedsWindowHours}
         />
       </Section>
     </Screen>

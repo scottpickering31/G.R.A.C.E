@@ -41,11 +41,13 @@ create table public.medications (
   created_by uuid not null references auth.users(id) on delete cascade,
   name text not null,
   dose text null,
+  expires_at date null,
   route public.medication_route not null default 'oral',
   instructions text null,
   schedule_type public.medication_schedule_type not null default 'as_needed',
   one_off_due_at timestamp with time zone null,
   stock_quantity numeric(10,2) null,
+  stock_capacity numeric(10,2) null,
   stock_unit text null,
   low_stock_threshold numeric(10,2) null,
   active boolean not null default true,
@@ -54,6 +56,7 @@ create table public.medications (
   constraint medications_stock_non_negative
     check (
       (stock_quantity is null or stock_quantity >= 0)
+      and (stock_capacity is null or stock_capacity >= 0)
       and (low_stock_threshold is null or low_stock_threshold >= 0)
     ),
   constraint medications_schedule_consistency

@@ -1,6 +1,7 @@
 import AppText from "@/src/components/AppText";
 import { useRouter } from "expo-router";
-import { Pressable, View } from "react-native";
+import { useState } from "react";
+import { Pressable, RefreshControl, ScrollView } from "react-native";
 
 const ITEMS = [
   { label: "Medical Plans", href: "/(tabs)/(pages)/medical-plans" },
@@ -13,9 +14,20 @@ const ITEMS = [
 
 export default function More() {
   const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await new Promise((resolve) => setTimeout(resolve, 650));
+    setRefreshing(false);
+  };
 
   return (
-    <View style={{ flex: 1, padding: 24, gap: 12 }}>
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ padding: 24, gap: 12 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
       <AppText style={{ fontSize: 24, fontWeight: "800" }}>More</AppText>
 
       {ITEMS.map((item) => (
@@ -29,6 +41,6 @@ export default function More() {
           </AppText>
         </Pressable>
       ))}
-    </View>
+    </ScrollView>
   );
 }

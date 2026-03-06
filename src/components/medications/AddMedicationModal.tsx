@@ -1,4 +1,7 @@
-import { useCreateMedication, useRxNormSearch } from "@/src/api/medications/hooks";
+import {
+  useCreateMedication,
+  useRxNormSearch,
+} from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
 import MonthCalendarModal from "@/src/components/calendar/MonthCalendarModal";
 import { theme } from "@/src/theme";
@@ -25,8 +28,12 @@ type Props = {
 
 type ScheduleType = "as_needed" | "daily_same_time" | "one_off";
 
-const HOURS_24 = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
-const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
+const HOURS_24 = Array.from({ length: 24 }, (_, i) =>
+  String(i).padStart(2, "0"),
+);
+const MINUTES = Array.from({ length: 60 }, (_, i) =>
+  String(i).padStart(2, "0"),
+);
 const DOSE_UNITS = [
   "mg",
   "mcg",
@@ -124,6 +131,8 @@ export default function AddMedicationModal({
   const [oneOffMinute, setOneOffMinute] = useState("00");
   const [showOneOffTimePicker, setShowOneOffTimePicker] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [expiresAtDate, setExpiresAtDate] = useState<Date | null>(null);
+  const [expiresCalendarVisible, setExpiresCalendarVisible] = useState(false);
 
   const [stockQuantity, setStockQuantity] = useState("");
   const [stockUnit, setStockUnit] = useState("tablets");
@@ -140,7 +149,8 @@ export default function AddMedicationModal({
   const [sliderTrackWidth, setSliderTrackWidth] = useState(0);
   const [openHelpKey, setOpenHelpKey] = useState<string | null>(null);
 
-  const { data: suggestions = [], isLoading: searching } = useRxNormSearch(debouncedSearch);
+  const { data: suggestions = [], isLoading: searching } =
+    useRxNormSearch(debouncedSearch);
   const createMedication = useCreateMedication();
 
   useEffect(() => {
@@ -176,6 +186,8 @@ export default function AddMedicationModal({
     setOneOffMinute("00");
     setShowOneOffTimePicker(false);
     setCalendarVisible(false);
+    setExpiresAtDate(null);
+    setExpiresCalendarVisible(false);
     setStockQuantity("");
     setStockUnit("tablets");
     setShowStockUnits(false);
@@ -198,6 +210,7 @@ export default function AddMedicationModal({
     setShowRouteOptions(false);
     setShowDailyTimePicker(false);
     setShowOneOffTimePicker(false);
+    setExpiresCalendarVisible(false);
     setOpenHelpKey(null);
     onClose();
   };
@@ -266,17 +279,25 @@ export default function AddMedicationModal({
         <AppText weight="semibold" style={styles.label}>
           {label}
         </AppText>
-        <Pressable style={styles.infoButton} onPress={() => toggleHelp(helpKey)}>
+        <Pressable
+          style={styles.infoButton}
+          onPress={() => toggleHelp(helpKey)}
+        >
           <Info size={14} color="rgba(31,45,61,0.72)" />
         </Pressable>
       </View>
-      {openHelpKey === helpKey ? <AppText style={styles.helpText}>{helpText}</AppText> : null}
+      {openHelpKey === helpKey ? (
+        <AppText style={styles.helpText}>{helpText}</AppText>
+      ) : null}
     </>
   );
 
   const saveMedication = async () => {
     if (!patientId || !userId) {
-      showToast("Could not find your patient context. Please refresh.", "error");
+      showToast(
+        "Could not find your patient context. Please refresh.",
+        "error",
+      );
       return;
     }
 
@@ -346,7 +367,8 @@ export default function AddMedicationModal({
         parsed !== undefined &&
         stockUnit.trim() &&
         lowStockAbsoluteUnit.trim() &&
-        stockUnit.trim().toLowerCase() !== lowStockAbsoluteUnit.trim().toLowerCase()
+        stockUnit.trim().toLowerCase() !==
+          lowStockAbsoluteUnit.trim().toLowerCase()
       ) {
         showToast(
           "Low-stock unit should match current stock unit for accurate alerts.",
@@ -358,10 +380,15 @@ export default function AddMedicationModal({
       lowThresholdValue = parsed;
     } else {
       if (stockQtyValue === undefined) {
-        showToast("Enter current stock first to use percentage threshold.", "error");
+        showToast(
+          "Enter current stock first to use percentage threshold.",
+          "error",
+        );
         return;
       }
-      lowThresholdValue = Number(((stockQtyValue * lowStockPercent) / 100).toFixed(2));
+      lowThresholdValue = Number(
+        ((stockQtyValue * lowStockPercent) / 100).toFixed(2),
+      );
     }
 
     try {
@@ -375,6 +402,7 @@ export default function AddMedicationModal({
         scheduleType,
         dailyTimes,
         oneOffDueAt,
+        expiresAt: expiresAtDate ? formatDateISO(expiresAtDate) : undefined,
         stockQuantity: stockQtyValue,
         stockUnit,
         lowStockThreshold: lowThresholdValue,
@@ -387,7 +415,12 @@ export default function AddMedicationModal({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={close}>
+    <Modal
+      visible={visible}
+      animationType="slide"
+      transparent
+      onRequestClose={close}
+    >
       <Pressable style={styles.backdrop} onPress={close}>
         <Pressable style={styles.sheet} onPress={() => {}}>
           <ScrollView keyboardShouldPersistTaps="handled">
@@ -425,7 +458,9 @@ export default function AddMedicationModal({
                 {searching ? (
                   <View style={styles.stateRow}>
                     <ActivityIndicator size="small" color="#4A90E2" />
-                    <AppText style={styles.stateText}>Searching RxNorm...</AppText>
+                    <AppText style={styles.stateText}>
+                      Searching RxNorm...
+                    </AppText>
                   </View>
                 ) : (
                   <ScrollView
@@ -438,14 +473,20 @@ export default function AddMedicationModal({
                       return (
                         <Pressable
                           key={item.rxcui}
-                          style={[styles.suggestionRow, active && styles.suggestionRowActive]}
+                          style={[
+                            styles.suggestionRow,
+                            active && styles.suggestionRowActive,
+                          ]}
                           onPress={() => {
                             setSelectedRxcui(item.rxcui);
                             setSearch(item.name);
                           }}
                         >
                           <View style={{ flex: 1 }}>
-                            <AppText weight="semibold" style={styles.suggestionName}>
+                            <AppText
+                              weight="semibold"
+                              style={styles.suggestionName}
+                            >
                               {item.name}
                             </AppText>
                           </View>
@@ -466,7 +507,9 @@ export default function AddMedicationModal({
               <View style={styles.doseRow}>
                 <TextInput
                   value={doseQuantity}
-                  onChangeText={(text) => setDoseQuantity(sanitizeDecimalInput(text))}
+                  onChangeText={(text) =>
+                    setDoseQuantity(sanitizeDecimalInput(text))
+                  }
                   placeholder="Qty"
                   keyboardType="decimal-pad"
                   placeholderTextColor="rgba(31,45,61,0.42)"
@@ -491,15 +534,24 @@ export default function AddMedicationModal({
                       return (
                         <Pressable
                           key={unit}
-                          style={[styles.unitRow, active && styles.unitRowActive]}
+                          style={[
+                            styles.unitRow,
+                            active && styles.unitRowActive,
+                          ]}
                           onPress={() => {
                             setDoseUnit(unit);
                             if (!stockUnitOverridden) setStockUnit(unit);
-                            if (!lowStockUnitOverridden) setLowStockAbsoluteUnit(unit);
+                            if (!lowStockUnitOverridden)
+                              setLowStockAbsoluteUnit(unit);
                             setShowDoseUnits(false);
                           }}
                         >
-                          <AppText style={[styles.unitRowText, active && styles.unitRowTextActive]}>
+                          <AppText
+                            style={[
+                              styles.unitRowText,
+                              active && styles.unitRowTextActive,
+                            ]}
+                          >
                             {unit}
                           </AppText>
                         </Pressable>
@@ -534,13 +586,21 @@ export default function AddMedicationModal({
                       return (
                         <Pressable
                           key={option.value}
-                          style={[styles.unitRow, active && styles.unitRowActive]}
+                          style={[
+                            styles.unitRow,
+                            active && styles.unitRowActive,
+                          ]}
                           onPress={() => {
                             setRoute(option.value);
                             setShowRouteOptions(false);
                           }}
                         >
-                          <AppText style={[styles.unitRowText, active && styles.unitRowTextActive]}>
+                          <AppText
+                            style={[
+                              styles.unitRowText,
+                              active && styles.unitRowTextActive,
+                            ]}
+                          >
                             {option.label}
                           </AppText>
                         </Pressable>
@@ -558,11 +618,13 @@ export default function AddMedicationModal({
                 "Choose As needed, Daily same time, or One-off depending on how this medication is used.",
               )}
               <View style={styles.scheduleRow}>
-                {([
-                  ["as_needed", "As needed"],
-                  ["daily_same_time", "Daily same time"],
-                  ["one_off", "One-off"],
-                ] as [ScheduleType, string][]).map(([value, label]) => {
+                {(
+                  [
+                    ["as_needed", "As needed"],
+                    ["daily_same_time", "Daily same time"],
+                    ["one_off", "One-off"],
+                  ] as [ScheduleType, string][]
+                ).map(([value, label]) => {
                   const active = scheduleType === value;
                   return (
                     <Pressable
@@ -570,7 +632,12 @@ export default function AddMedicationModal({
                       onPress={() => setScheduleType(value)}
                       style={[styles.chip, active && styles.chipActive]}
                     >
-                      <AppText style={[styles.chipText, active && styles.chipTextActive]}>
+                      <AppText
+                        style={[
+                          styles.chipText,
+                          active && styles.chipTextActive,
+                        ]}
+                      >
                         {label}
                       </AppText>
                     </Pressable>
@@ -595,7 +662,10 @@ export default function AddMedicationModal({
                   </AppText>
                 </Pressable>
                 <View style={styles.dailyActionsRow}>
-                  <Pressable style={styles.smallActionButton} onPress={addDailyTime}>
+                  <Pressable
+                    style={styles.smallActionButton}
+                    onPress={addDailyTime}
+                  >
                     <AppText weight="semibold" style={styles.smallActionText}>
                       Add this time
                     </AppText>
@@ -679,7 +749,9 @@ export default function AddMedicationModal({
               <View style={styles.stockRow}>
                 <TextInput
                   value={stockQuantity}
-                  onChangeText={(text) => setStockQuantity(sanitizeDecimalInput(text))}
+                  onChangeText={(text) =>
+                    setStockQuantity(sanitizeDecimalInput(text))
+                  }
                   placeholder="Quantity"
                   keyboardType="decimal-pad"
                   placeholderTextColor="rgba(31,45,61,0.42)"
@@ -704,14 +776,22 @@ export default function AddMedicationModal({
                       return (
                         <Pressable
                           key={`stock-${unit}`}
-                          style={[styles.unitRow, active && styles.unitRowActive]}
+                          style={[
+                            styles.unitRow,
+                            active && styles.unitRowActive,
+                          ]}
                           onPress={() => {
                             setStockUnit(unit);
                             setStockUnitOverridden(true);
                             setShowStockUnits(false);
                           }}
                         >
-                          <AppText style={[styles.unitRowText, active && styles.unitRowTextActive]}>
+                          <AppText
+                            style={[
+                              styles.unitRowText,
+                              active && styles.unitRowTextActive,
+                            ]}
+                          >
                             {unit}
                           </AppText>
                         </Pressable>
@@ -724,7 +804,7 @@ export default function AddMedicationModal({
 
             <View style={styles.field}>
               {renderFieldLabel(
-                "Low-stock threshold (optional)",
+                "Low-stock Notification Threshold",
                 "low_stock",
                 "Set the point where the app should consider stock low. Use a fixed quantity or a percentage of current stock.",
               )}
@@ -732,14 +812,16 @@ export default function AddMedicationModal({
                 <Pressable
                   style={[
                     styles.thresholdModeChip,
-                    lowStockMode === "absolute" && styles.thresholdModeChipActive,
+                    lowStockMode === "absolute" &&
+                      styles.thresholdModeChipActive,
                   ]}
                   onPress={() => setLowStockMode("absolute")}
                 >
                   <AppText
                     style={[
                       styles.thresholdModeText,
-                      lowStockMode === "absolute" && styles.thresholdModeTextActive,
+                      lowStockMode === "absolute" &&
+                        styles.thresholdModeTextActive,
                     ]}
                   >
                     Qty + unit
@@ -748,7 +830,8 @@ export default function AddMedicationModal({
                 <Pressable
                   style={[
                     styles.thresholdModeChip,
-                    lowStockMode === "percent" && styles.thresholdModeChipActive,
+                    lowStockMode === "percent" &&
+                      styles.thresholdModeChipActive,
                     !canUsePercentThreshold && styles.thresholdModeChipDisabled,
                   ]}
                   onPress={() => {
@@ -759,8 +842,10 @@ export default function AddMedicationModal({
                   <AppText
                     style={[
                       styles.thresholdModeText,
-                      lowStockMode === "percent" && styles.thresholdModeTextActive,
-                      !canUsePercentThreshold && styles.thresholdModeTextDisabled,
+                      lowStockMode === "percent" &&
+                        styles.thresholdModeTextActive,
+                      !canUsePercentThreshold &&
+                        styles.thresholdModeTextDisabled,
                     ]}
                   >
                     % of stock
@@ -769,7 +854,8 @@ export default function AddMedicationModal({
               </View>
               {!canUsePercentThreshold ? (
                 <AppText style={styles.helperTextMuted}>
-                  Add Current stock quantity above to enable percentage threshold.
+                  Add Current stock quantity above to enable percentage
+                  threshold.
                 </AppText>
               ) : null}
 
@@ -790,7 +876,9 @@ export default function AddMedicationModal({
                       style={[styles.input, styles.stockInput]}
                       onPress={() => setShowLowStockUnits((prev) => !prev)}
                     >
-                      <AppText style={styles.doseUnitText}>{lowStockAbsoluteUnit}</AppText>
+                      <AppText style={styles.doseUnitText}>
+                        {lowStockAbsoluteUnit}
+                      </AppText>
                     </Pressable>
                   </View>
                   {showLowStockUnits ? (
@@ -805,7 +893,10 @@ export default function AddMedicationModal({
                           return (
                             <Pressable
                               key={`threshold-${unit}`}
-                              style={[styles.unitRow, active && styles.unitRowActive]}
+                              style={[
+                                styles.unitRow,
+                                active && styles.unitRowActive,
+                              ]}
                               onPress={() => {
                                 setLowStockAbsoluteUnit(unit);
                                 setLowStockUnitOverridden(true);
@@ -831,7 +922,9 @@ export default function AddMedicationModal({
                 <View style={styles.sliderCard}>
                   <View
                     style={styles.sliderTrack}
-                    onLayout={(e) => setSliderTrackWidth(e.nativeEvent.layout.width)}
+                    onLayout={(e) =>
+                      setSliderTrackWidth(e.nativeEvent.layout.width)
+                    }
                     {...sliderPanResponder.panHandlers}
                   >
                     <View
@@ -856,6 +949,23 @@ export default function AddMedicationModal({
                   </View>
                 </View>
               )}
+            </View>
+
+            <View style={styles.field}>
+              {renderFieldLabel(
+                "Expires at (optional)",
+                "expires_at",
+                "Set the medication expiry date from the packaging so you can replace it in time.",
+              )}
+              <Pressable
+                style={styles.dateInputWrap}
+                onPress={() => setExpiresCalendarVisible(true)}
+              >
+                <Calendar size={16} color="rgba(31,45,61,0.6)" />
+                <AppText style={styles.dateInputText}>
+                  {expiresAtDate ? formatDateISO(expiresAtDate) : "Select expiry date"}
+                </AppText>
+              </Pressable>
             </View>
 
             <View style={styles.field}>
@@ -915,6 +1025,22 @@ export default function AddMedicationModal({
             }}
           />
 
+          <MonthCalendarModal
+            visible={expiresCalendarVisible}
+            initialDate={expiresAtDate ?? new Date()}
+            onClose={() => setExpiresCalendarVisible(false)}
+            onSelect={(selectedDate) => {
+              setExpiresAtDate(
+                new Date(
+                  selectedDate.getFullYear(),
+                  selectedDate.getMonth(),
+                  selectedDate.getDate(),
+                ),
+              );
+              setExpiresCalendarVisible(false);
+            }}
+          />
+
           <Modal
             visible={showDailyTimePicker}
             transparent
@@ -948,10 +1074,18 @@ export default function AddMedicationModal({
                         return (
                           <Pressable
                             key={hour}
-                            style={[styles.pickerRow, active && styles.pickerRowActive]}
+                            style={[
+                              styles.pickerRow,
+                              active && styles.pickerRowActive,
+                            ]}
                             onPress={() => setDailyHour(hour)}
                           >
-                            <AppText style={[styles.pickerRowText, active && styles.pickerRowTextActive]}>
+                            <AppText
+                              style={[
+                                styles.pickerRowText,
+                                active && styles.pickerRowTextActive,
+                              ]}
+                            >
                               {hour}
                             </AppText>
                           </Pressable>
@@ -972,10 +1106,18 @@ export default function AddMedicationModal({
                         return (
                           <Pressable
                             key={minute}
-                            style={[styles.pickerRow, active && styles.pickerRowActive]}
+                            style={[
+                              styles.pickerRow,
+                              active && styles.pickerRowActive,
+                            ]}
                             onPress={() => setDailyMinute(minute)}
                           >
-                            <AppText style={[styles.pickerRowText, active && styles.pickerRowTextActive]}>
+                            <AppText
+                              style={[
+                                styles.pickerRowText,
+                                active && styles.pickerRowTextActive,
+                              ]}
+                            >
                               {minute}
                             </AppText>
                           </Pressable>
@@ -1001,7 +1143,10 @@ export default function AddMedicationModal({
                     style={styles.secondaryButton}
                     onPress={() => setShowDailyTimePicker(false)}
                   >
-                    <AppText weight="semibold" style={styles.secondaryButtonText}>
+                    <AppText
+                      weight="semibold"
+                      style={styles.secondaryButtonText}
+                    >
                       Done
                     </AppText>
                   </Pressable>
@@ -1043,10 +1188,18 @@ export default function AddMedicationModal({
                         return (
                           <Pressable
                             key={`oneoff-hour-${hour}`}
-                            style={[styles.pickerRow, active && styles.pickerRowActive]}
+                            style={[
+                              styles.pickerRow,
+                              active && styles.pickerRowActive,
+                            ]}
                             onPress={() => setOneOffHour(hour)}
                           >
-                            <AppText style={[styles.pickerRowText, active && styles.pickerRowTextActive]}>
+                            <AppText
+                              style={[
+                                styles.pickerRowText,
+                                active && styles.pickerRowTextActive,
+                              ]}
+                            >
                               {hour}
                             </AppText>
                           </Pressable>
@@ -1067,10 +1220,18 @@ export default function AddMedicationModal({
                         return (
                           <Pressable
                             key={`oneoff-minute-${minute}`}
-                            style={[styles.pickerRow, active && styles.pickerRowActive]}
+                            style={[
+                              styles.pickerRow,
+                              active && styles.pickerRowActive,
+                            ]}
                             onPress={() => setOneOffMinute(minute)}
                           >
-                            <AppText style={[styles.pickerRowText, active && styles.pickerRowTextActive]}>
+                            <AppText
+                              style={[
+                                styles.pickerRowText,
+                                active && styles.pickerRowTextActive,
+                              ]}
+                            >
                               {minute}
                             </AppText>
                           </Pressable>
@@ -1085,7 +1246,10 @@ export default function AddMedicationModal({
                     style={styles.secondaryButton}
                     onPress={() => setShowOneOffTimePicker(false)}
                   >
-                    <AppText weight="semibold" style={styles.secondaryButtonText}>
+                    <AppText
+                      weight="semibold"
+                      style={styles.secondaryButtonText}
+                    >
                       Done
                     </AppText>
                   </Pressable>

@@ -41,3 +41,10 @@ app-example
 # generated native folders
 /ios
 /android
+
+# schema files
+ideas.md
+medications_schema_update_schedule_stock.sql
+medications_schema.sql
+medications_seed.sql
+notes.md

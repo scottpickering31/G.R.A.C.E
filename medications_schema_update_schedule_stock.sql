@@ -50,8 +50,10 @@ end $$;
 alter table public.medications
   add column if not exists schedule_type public.medication_schedule_type not null default 'as_needed',
   add column if not exists route public.medication_route not null default 'oral',
+  add column if not exists expires_at date null,
   add column if not exists one_off_due_at timestamp with time zone null,
   add column if not exists stock_quantity numeric(10,2) null,
+  add column if not exists stock_capacity numeric(10,2) null,
   add column if not exists stock_unit text null,
   add column if not exists low_stock_threshold numeric(10,2) null;
 
@@ -78,6 +80,7 @@ begin
     add constraint medications_stock_non_negative
     check (
       (stock_quantity is null or stock_quantity >= 0)
+      and (stock_capacity is null or stock_capacity >= 0)
       and (low_stock_threshold is null or low_stock_threshold >= 0)
     );
 end $$;
@@ -106,6 +109,11 @@ create index if not exists idx_medications_one_off_due on public.medications(one
 create index if not exists idx_medications_route on public.medications(route);
 create index if not exists idx_medication_schedule_times_medication on public.medication_schedule_times(medication_id);
 create index if not exists idx_medication_schedule_times_time on public.medication_schedule_times(time_of_day);
+
+update public.medications
+set stock_capacity = stock_quantity
+where stock_capacity is null
+  and stock_quantity is not null;
 
 alter table public.medication_schedule_times enable row level security;
 

@@ -1,17 +1,40 @@
 // Section.tsx
-import React, { PropsWithChildren, ReactNode } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import React, { PropsWithChildren, ReactNode, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 
 type SectionProps = PropsWithChildren<{
   header?: ReactNode; // fixed content at the top
   scrollEnabled?: boolean;
+  onRefresh?: () => void | Promise<void>;
+  pullToRefreshEnabled?: boolean;
 }>;
 
 export default function Section({
   header,
   children,
   scrollEnabled = true,
+  onRefresh,
+  pullToRefreshEnabled = true,
 }: SectionProps) {
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  const handleRefresh = async () => {
+    if (!pullToRefreshEnabled) return;
+    setRefreshing(true);
+
+    try {
+      if (onRefresh) {
+        await onRefresh();
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 650));
+      }
+      setRefreshTick((v) => v + 1);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   return (
     <View style={styles.shell}>
       <View style={styles.baseBg} />
@@ -25,8 +48,13 @@ export default function Section({
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={true}
+          refreshControl={
+            pullToRefreshEnabled ? (
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            ) : undefined
+          }
         >
-          {children}
+          <View key={refreshTick}>{children}</View>
         </ScrollView>
       ) : (
         <View style={styles.scrollContent}>{children}</View>

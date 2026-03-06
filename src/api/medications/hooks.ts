@@ -2,10 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createMedication,
   CreateMedicationInput,
+  deleteMedication,
   getMedications,
+  getPrimaryPatient,
   getPrimaryPatientId,
   getUpcomingMedicationDoses,
   searchRxNormDrugs,
+  updateMedication,
+  UpdateMedicationInput,
 } from "./service";
 
 export function usePrimaryPatientId(userId?: string) {
@@ -17,10 +21,19 @@ export function usePrimaryPatientId(userId?: string) {
   });
 }
 
-export function useUpcomingMedicationDoses(patientId?: string) {
+export function usePrimaryPatient(userId?: string) {
   return useQuery({
-    queryKey: ["upcoming-med-doses", patientId],
-    queryFn: () => getUpcomingMedicationDoses(patientId!),
+    queryKey: ["primary-patient", userId],
+    queryFn: () => getPrimaryPatient(userId!),
+    enabled: !!userId,
+    staleTime: 60_000,
+  });
+}
+
+export function useUpcomingMedicationDoses(patientId?: string, windowHours = 24) {
+  return useQuery({
+    queryKey: ["upcoming-med-doses", patientId, windowHours],
+    queryFn: () => getUpcomingMedicationDoses(patientId!, windowHours),
     enabled: !!patientId,
     staleTime: 30_000,
   });
@@ -53,6 +66,32 @@ export function useCreateMedication() {
     onSuccess: (_id, input) => {
       qc.invalidateQueries({ queryKey: ["medications", input.patientId] });
       qc.invalidateQueries({ queryKey: ["upcoming-med-doses", input.patientId] });
+    },
+  });
+}
+
+export function useUpdateMedication(patientId?: string) {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: UpdateMedicationInput) => updateMedication(input),
+    onSuccess: () => {
+      if (!patientId) return;
+      qc.invalidateQueries({ queryKey: ["medications", patientId] });
+      qc.invalidateQueries({ queryKey: ["upcoming-med-doses", patientId] });
+    },
+  });
+}
+
+export function useDeleteMedication(patientId?: string) {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (medicationId: string) => deleteMedication(medicationId),
+    onSuccess: () => {
+      if (!patientId) return;
+      qc.invalidateQueries({ queryKey: ["medications", patientId] });
+      qc.invalidateQueries({ queryKey: ["upcoming-med-doses", patientId] });
     },
   });
 }
