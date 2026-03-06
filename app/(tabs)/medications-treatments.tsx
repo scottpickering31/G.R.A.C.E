@@ -4,7 +4,9 @@ import {
   usePrimaryPatientId,
   useUpcomingMedicationDoses,
 } from "@/src/api/medications/hooks";
+import { MedicationListItem } from "@/src/api/medications/service";
 import AppText from "@/src/components/AppText";
+import CurrentTime from "@/src/components/calendar/CurrentTime";
 import Card from "@/src/components/layout/Card";
 import ListBlock from "@/src/components/layout/ListBlock";
 import Screen from "@/src/components/layout/Screen";
@@ -16,8 +18,7 @@ import MedsDueModal, {
 } from "@/src/components/medications/MedsDueModal";
 import ProfileHeader from "@/src/components/profile/ProfileHeader";
 import { useAuthStore } from "@/src/state/auth.store";
-import { MedicationListItem } from "@/src/api/medications/service";
-import { AlarmClock, Pill, PillBottle, Plus } from "lucide-react-native";
+import { AlarmClock, Clock, Pill, Plus } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -55,40 +56,61 @@ function formatRoute(route: string) {
   return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1);
 }
 
-function formatWindowLabel(hours: MedsDueWindowHours) {
-  if (hours === 1) return "In the next hour";
-  if (hours === 24) return "In the next 24 hours";
-  return "In the next 7 days";
-}
-
 export default function MedicationsTreatments() {
   const [showMedsDue, setShowMedsDue] = useState(false);
   const [showAddMedication, setShowAddMedication] = useState(false);
-  const [selectedMedication, setSelectedMedication] = useState<MedicationListItem | null>(null);
-  const [medsWindowHours, setMedsWindowHours] = useState<MedsDueWindowHours>(24);
+  const [selectedMedication, setSelectedMedication] =
+    useState<MedicationListItem | null>(null);
+  const [medsWindowHours, setMedsWindowHours] =
+    useState<MedsDueWindowHours>(24);
 
   const userId = useAuthStore((s) => s.session?.user.id);
-  const { data: primaryPatientId, refetch: refetchPrimaryPatient } = usePrimaryPatientId(userId);
+  const { data: primaryPatientId, refetch: refetchPrimaryPatient } =
+    usePrimaryPatientId(userId);
   const { data: upcomingMedsData, refetch: refetchUpcomingMeds } =
     useUpcomingMedicationDoses(primaryPatientId ?? undefined, medsWindowHours);
-  const { data: medicationsData, refetch: refetchMedications } =
-    useMedications(primaryPatientId ?? undefined);
+  const { data: medicationsData, refetch: refetchMedications } = useMedications(
+    primaryPatientId ?? undefined,
+  );
 
   const upcomingMeds: UpcomingMedication[] = upcomingMedsData ?? [];
   const medications = useMemo(() => medicationsData ?? [], [medicationsData]);
 
   useEffect(() => {
     if (!selectedMedication) return;
-    const updated = medications.find((m) => m.id === selectedMedication.id) ?? null;
+    const updated =
+      medications.find((m) => m.id === selectedMedication.id) ?? null;
     if (!updated || updated === selectedMedication) return;
     setSelectedMedication(updated);
   }, [medications, selectedMedication]);
 
   const nextDueLabel = (() => {
     if (!upcomingMeds.length) return "No upcoming doses";
-    const first = [...upcomingMeds].sort((a, b) => a.dueAt.getTime() - b.dueAt.getTime())[0];
-    return `Next: ${first.dueAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
+    const first = [...upcomingMeds].sort(
+      (a, b) => a.dueAt.getTime() - b.dueAt.getTime(),
+    )[0];
+    return `Due at: ${first.dueAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}`;
   })();
+  const nextMedicationName = (() => {
+    if (!upcomingMeds.length) return "No meds due";
+    const first = [...upcomingMeds].sort(
+      (a, b) => a.dueAt.getTime() - b.dueAt.getTime(),
+    )[0];
+    return first.name;
+  })();
+  const nextMedicationDose = (() => {
+    if (!upcomingMeds.length) return "";
+    const first = [...upcomingMeds].sort(
+      (a, b) => a.dueAt.getTime() - b.dueAt.getTime(),
+    )[0];
+    return first.dose;
+  })();
+  const medsWindowLabel =
+    medsWindowHours === 1
+      ? "Next hour"
+      : medsWindowHours === 24
+        ? "Next 24 hours"
+        : "Next 7 days";
 
   return (
     <Screen
@@ -110,19 +132,37 @@ export default function MedicationsTreatments() {
 
         <Card elevationActive={true} borderActive={true} padding="md">
           <View style={styles.headerRow}>
-            <AlarmClock size={20} color="#1F2937" />
-            <AppText style={styles.headerText}>Medication Actions</AppText>
+            <View style={styles.headerLeft}>
+              <AlarmClock size={20} color="#1F2937" />
+              <AppText style={styles.headerText}>Meds Due</AppText>
+              <AppText style={styles.headerWindowText}>
+                ({medsWindowLabel})
+              </AppText>
+            </View>
+            <View style={styles.headerRight}>
+              <Clock size={18} color="#4A90E2" />
+              <CurrentTime />
+            </View>
           </View>
 
-          <ListBlock
-            Icon={PillBottle}
-            iconBgColor="rgba(74, 144, 226, 0.18)"
-            title="Meds Due"
-            subtitle={`${formatWindowLabel(medsWindowHours)} • ${nextDueLabel}`}
-            rightText={`${upcomingMeds.length} upcoming`}
-            showChevron={false}
+          <Pressable
+            style={styles.featuredMedsCard}
             onPress={() => setShowMedsDue(true)}
-          />
+          >
+            <AppText
+              weight="bold"
+              style={styles.featuredMedicationName}
+              numberOfLines={1}
+            >
+              Next Medication: {nextMedicationName}
+            </AppText>
+            {nextMedicationDose ? (
+              <AppText style={styles.featuredDoseText} numberOfLines={1}>
+                Dose: {nextMedicationDose}
+              </AppText>
+            ) : null}
+            <AppText style={styles.featuredDueText}>{nextDueLabel}</AppText>
+          </Pressable>
 
           <Pressable
             style={styles.addButton}
@@ -197,11 +237,25 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
     marginBottom: 8,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   headerText: {
     fontWeight: "600",
+  },
+  headerWindowText: {
+    color: "rgba(31,45,61,0.72)",
+    fontSize: 12,
   },
   addButton: {
     marginTop: 4,
@@ -231,6 +285,29 @@ const styles = StyleSheet.create({
     color: "rgba(31,45,61,0.72)",
     fontSize: 12,
     marginTop: 2,
+  },
+  featuredMedsCard: {
+    marginTop: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.25)",
+    backgroundColor: "rgba(74,144,226,0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 4,
+  },
+  featuredMedicationName: {
+    color: "#1F2937",
+    fontSize: 18,
+  },
+  featuredDueText: {
+    color: "#2B6CB0",
+    fontSize: 13,
+  },
+  featuredDoseText: {
+    color: "rgba(31,45,61,0.72)",
+    fontSize: 12,
+    marginTop: 1,
   },
   listTitle: {
     marginBottom: 2,
