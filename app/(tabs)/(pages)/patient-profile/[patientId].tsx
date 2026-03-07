@@ -5,11 +5,10 @@ import AppText from "@/src/components/AppText";
 import Loading from "@/src/components/Loading";
 import Screen from "@/src/components/layout/Screen";
 import { useAuthStore } from "@/src/state/auth.store";
-import { useUIStore } from "@/state/ui.store";
 import { theme } from "@/src/theme";
+import { useUIStore } from "@/state/ui.store";
 import * as Clipboard from "expo-clipboard";
-import { useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   CalendarDays,
   Copy,
@@ -19,6 +18,7 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react-native";
+import { useState } from "react";
 import { Pressable, Share, StyleSheet, View } from "react-native";
 
 function formatDob(dob: string | null) {
@@ -59,6 +59,12 @@ export default function PatientProfileDetailsPage() {
 
   const { data, isLoading } = usePatientProfileDetails(userId, patientId);
   const patientAccessCode = data ? buildPatientAccessCode(data.id) : null;
+
+  useFocusEffect(() => {
+    return () => {
+      setShowSecretCode(false);
+    };
+  });
 
   if (isLoading) {
     return <Loading />;
@@ -114,10 +120,14 @@ export default function PatientProfileDetailsPage() {
 
               <View style={styles.infoRow}>
                 <CalendarDays size={14} color={theme.colors.text.secondary} />
-                <AppText style={styles.infoText}>DOB: {formatDob(data.dob)}</AppText>
+                <AppText style={styles.infoText}>
+                  DOB: {formatDob(data.dob)}
+                </AppText>
               </View>
 
-              <AppText style={styles.infoText}>Sex: {formatSex(data.sex)}</AppText>
+              <AppText style={styles.infoText}>
+                Sex: {formatSex(data.sex)}
+              </AppText>
               <AppText style={styles.infoText}>
                 Access Role: {roleLabel(data.role)}
               </AppText>
@@ -129,7 +139,9 @@ export default function PatientProfileDetailsPage() {
               </AppText>
               <View style={styles.secretCodeWrap}>
                 <View style={styles.secretHeaderRow}>
-                  <AppText style={styles.secretLabel}>Patient Secret Code</AppText>
+                  <AppText style={styles.secretLabel}>
+                    Patient Secret Code
+                  </AppText>
                   <Pressable
                     style={styles.secretEyeBtn}
                     onPress={() => setShowSecretCode((prev) => !prev)}
@@ -145,7 +157,8 @@ export default function PatientProfileDetailsPage() {
                   {showSecretCode ? patientAccessCode : "●●●●-●●●●-●●●●"}
                 </AppText>
                 <AppText style={styles.helperText}>
-                  Share this code with family or clinicians for read-only access.
+                  Share this code with family or clinicians for access to{" "}
+                  {data?.display_name ?? "Patient Profile"}
                 </AppText>
 
                 <View style={styles.secretActionsRow}>

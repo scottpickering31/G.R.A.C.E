@@ -3,6 +3,8 @@ import {
   AccessiblePatient,
   clearMedicationHistoryException,
   ClearMedicationHistoryExceptionInput,
+  createPatientProfileForUser,
+  CreatePatientProfileInput,
   createMedication,
   CreateMedicationInput,
   deleteMedication,
@@ -174,10 +176,25 @@ export function useSetActivePatient(userId?: string) {
       qc.invalidateQueries({ queryKey: ["accessible-patients", userId] });
       qc.invalidateQueries({ queryKey: ["primary-patient-id", userId] });
       qc.invalidateQueries({ queryKey: ["primary-patient", userId] });
+      qc.invalidateQueries({ queryKey: ["patient-profile-details", userId] });
       qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["medications"] });
       qc.invalidateQueries({ queryKey: ["upcoming-med-doses"] });
       qc.invalidateQueries({ queryKey: ["medication-history"] });
+    },
+  });
+}
+
+export function useCreatePatientProfile(userId?: string) {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreatePatientProfileInput) => createPatientProfileForUser(input),
+    onSuccess: () => {
+      if (!userId) return;
+      qc.invalidateQueries({ queryKey: ["accessible-patients", userId] });
+      qc.invalidateQueries({ queryKey: ["primary-patient-id", userId] });
+      qc.invalidateQueries({ queryKey: ["primary-patient", userId] });
     },
   });
 }

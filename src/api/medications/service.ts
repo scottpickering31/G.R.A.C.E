@@ -43,6 +43,12 @@ export type PatientProfileDetails = {
   isActive: boolean;
 };
 
+export type CreatePatientProfileInput = {
+  userId: string;
+  displayName: string;
+  dob: string;
+};
+
 export type CreateMedicationInput = {
   patientId: string;
   userId: string;
@@ -314,6 +320,56 @@ export async function setActivePatient({
     }
     throw upsertError;
   }
+}
+
+export async function createPatientProfileForUser({
+  userId,
+  displayName,
+  dob,
+}: CreatePatientProfileInput): Promise<void> {
+  const trimmedName = displayName.trim();
+  const trimmedDob = dob.trim();
+  if (!trimmedName) {
+    throw new Error("Patient name is required.");
+  }
+  if (!trimmedDob) {
+    throw new Error("Date of birth is required.");
+  }
+  const parsedDob = new Date(trimmedDob);
+  if (Number.isNaN(parsedDob.getTime())) {
+    throw new Error("Date of birth is invalid.");
+  }
+
+  const { count, error: countError } = await supabase
+    .from("patient_members")
+    .select("patient_id", { count: "exact", head: true })
+    .eq("user_id", userId);
+
+  if (countError) throw countError;
+  if ((count ?? 0) >= 2) {
+    throw new Error("Maximum of 2 patients allowed per user.");
+  }
+
+  const { data: patient, error: patientError } = await supabase
+    .from("patients")
+    .insert({
+      created_by: userId,
+      display_name: trimmedName,
+      dob: trimmedDob,
+    })
+    .select("id")
+    .single();
+
+  if (patientError) throw patientError;
+
+  const { error: memberError } = await supabase.from("patient_members").insert({
+    patient_id: patient.id,
+    user_id: userId,
+    role: "owner",
+  });
+
+  // Membership may already be created by trigger.
+  if (memberError && memberError.code !== "23505") throw memberError;
 }
 
 export async function getMedications(

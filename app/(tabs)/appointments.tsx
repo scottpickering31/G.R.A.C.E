@@ -2,11 +2,19 @@ import Card from "@/components/layout/Card";
 import Screen from "@/components/layout/Screen";
 import Section from "@/components/layout/Section";
 import ProfileHeader from "@/components/profile/ProfileHeader";
+import {
+  useAppointments,
+  useSetAppointmentCompleted,
+  useUpsertAppointment,
+} from "@/src/api/appointments/hooks";
+import { usePrimaryPatientId } from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
 import CollapsibleCalendar from "@/src/components/calendar/CollapsibleCalendar";
 import MonthCalendarModal from "@/src/components/calendar/MonthCalendarModal";
 import SwipeableTabScreen from "@/src/components/navigation/SwipeableTabScreen";
+import { useAuthStore } from "@/src/state/auth.store";
 import { theme } from "@/src/theme";
+import { useUIStore } from "@/state/ui.store";
 import { useFocusEffect } from "@react-navigation/native";
 import {
   CalendarDays,
@@ -56,49 +64,6 @@ type AppointmentForm = {
   clinician: string;
   notes: string;
 };
-
-const INITIAL_APPOINTMENTS: AppointmentItem[] = [
-  {
-    id: "a1",
-    title: "Speech Therapy",
-    startsAt: "2026-03-06T13:00:00",
-    type: "Therapy",
-    location: "Children's Clinic",
-    clinician: "Dr. Reed",
-    notes: "Bring communication workbook",
-    completed: false,
-  },
-  {
-    id: "a2",
-    title: "Neurology Follow-Up",
-    startsAt: "2026-03-06T18:30:00",
-    type: "Consult",
-    location: "City Hospital",
-    clinician: "Dr. Patel",
-    notes: "Discuss dosage response",
-    completed: false,
-  },
-  {
-    id: "a3",
-    title: "OT Therapy Session",
-    startsAt: "2026-03-07T09:15:00",
-    type: "Therapy",
-    location: "Home Visit",
-    clinician: "M. Carter",
-    notes: "Focus on grip exercises",
-    completed: false,
-  },
-  {
-    id: "a4",
-    title: "Pediatric Review",
-    startsAt: "2026-03-05T11:00:00",
-    type: "Review",
-    location: "Children's Clinic",
-    clinician: "Dr. Owens",
-    notes: "Weight and growth check",
-    completed: true,
-  },
-];
 
 const FILTERS: { key: AppointmentFilter; label: string }[] = [
   { key: "all", label: "All" },
@@ -209,9 +174,19 @@ function emptyForm(dateKey: string): AppointmentForm {
 }
 
 export default function Appointments() {
+  const userId = useAuthStore((s) => s.session?.user.id);
+  const { showToast } = useUIStore();
+  const { data: primaryPatientId, refetch: refetchPrimaryPatient } =
+    usePrimaryPatientId(userId);
+  const {
+    data: appointmentsData,
+    refetch: refetchAppointments,
+  } = useAppointments(primaryPatientId ?? undefined);
+  const upsertAppointment = useUpsertAppointment(primaryPatientId ?? undefined);
+  const setAppointmentCompleted = useSetAppointmentCompleted(
+    primaryPatientId ?? undefined,
+  );
   const [date, setDate] = useState(normalizeLocalDate(new Date()));
-  const [appointments, setAppointments] =
-    useState<AppointmentItem[]>(INITIAL_APPOINTMENTS);
   const [agendaMode, setAgendaMode] = useState<AgendaMode>("daily");
   const [filter, setFilter] = useState<AppointmentFilter>("all");
   const [showEditor, setShowEditor] = useState(false);
@@ -221,6 +196,10 @@ export default function Appointments() {
   const [form, setForm] = useState<AppointmentForm>(emptyForm(formatDateKey(new Date())));
   const [pickerHour, setPickerHour] = useState("09");
   const [pickerMinute, setPickerMinute] = useState("00");
+  const appointments = useMemo(
+    () => appointmentsData ?? [],
+    [appointmentsData],
+  );
 
   const nowTs = Date.now();
   const selectedDateKey = formatDateKey(date);
@@ -320,7 +299,8 @@ export default function Appointments() {
     setPickerMinute("00");
   };
 
-  const saveAppointment = () => {
+  const saveAppointment = async () => {
+    if (!primaryPatientId || !userId) return;
     if (!form.title.trim()) return;
 
     const [hourRaw = "09", minuteRaw = "00"] = form.time.split(":");
@@ -342,47 +322,33 @@ export default function Appointments() {
       0,
     ).toISOString();
 
-    if (editingId) {
-      setAppointments((prev) =>
-        prev.map((item) =>
-          item.id === editingId
-            ? {
-                ...item,
-                title: form.title.trim(),
-                startsAt,
-                type: form.type.trim() || "General",
-                location: form.location.trim() || "Not set",
-                clinician: form.clinician.trim() || "Not set",
-                notes: form.notes.trim(),
-              }
-            : item,
-        ),
-      );
-    } else {
-      setAppointments((prev) => [
-        ...prev,
-        {
-          id: `local-${Date.now()}`,
-          title: form.title.trim(),
-          startsAt,
-          type: form.type.trim() || "General",
-          location: form.location.trim() || "Not set",
-          clinician: form.clinician.trim() || "Not set",
-          notes: form.notes.trim(),
-          completed: false,
-        },
-      ]);
+    try {
+      await upsertAppointment.mutateAsync({
+        id: editingId ?? undefined,
+        patientId: primaryPatientId,
+        userId,
+        title: form.title.trim(),
+        startsAt,
+        type: form.type.trim() || "General",
+        location: form.location.trim() || "Not set",
+        clinician: form.clinician.trim() || "Not set",
+        notes: form.notes.trim(),
+      });
+      closeEditor();
+    } catch (e: any) {
+      showToast(e?.message ?? "Could not save appointment.", "error");
     }
-
-    closeEditor();
   };
 
-  const toggleCompleted = (id: string) => {
-    setAppointments((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, completed: !item.completed } : item,
-      ),
-    );
+  const toggleCompleted = async (id: string, completed: boolean) => {
+    try {
+      await setAppointmentCompleted.mutateAsync({
+        appointmentId: id,
+        completed,
+      });
+    } catch (e: any) {
+      showToast(e?.message ?? "Could not update appointment status.", "error");
+    }
   };
 
   return (
@@ -391,7 +357,12 @@ export default function Appointments() {
         screenBackground={require("@/assets/images/clouds.png")}
         useSafeArea={false}
       >
-        <Section>
+        <Section
+          onRefresh={async () => {
+            await refetchPrimaryPatient();
+            await refetchAppointments();
+          }}
+        >
           <View style={styles.headerContainer}>
             <ProfileHeader />
           </View>
@@ -614,7 +585,7 @@ export default function Appointments() {
 
                         <Pressable
                           style={styles.completeBtn}
-                          onPress={() => toggleCompleted(item.id)}
+                          onPress={() => toggleCompleted(item.id, !item.completed)}
                         >
                           <AppText style={styles.completeBtnText}>
                             {item.completed
