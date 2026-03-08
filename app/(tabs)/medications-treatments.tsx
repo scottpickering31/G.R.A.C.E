@@ -22,7 +22,6 @@ import AddMedicationModal from "@/src/components/medications/AddMedicationModal"
 import MedicationHistoryModal from "@/src/components/medications/MedicationHistoryModal";
 import MedicationDetailModal from "@/src/components/medications/MedicationDetailModal";
 import MedsDueModal, {
-  MedsDueWindowHours,
   UpcomingMedication,
 } from "@/src/components/medications/MedsDueModal";
 import ProfileHeader from "@/src/components/profile/ProfileHeader";
@@ -87,11 +86,11 @@ export default function MedicationsTreatments() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedMedication, setSelectedMedication] =
     useState<MedicationListItem | null>(null);
-  const [medsWindowHours, setMedsWindowHours] =
-    useState<MedsDueWindowHours>(24);
   const sectionScrollRef = useRef<ScrollView | null>(null);
   const activeMedsSectionY = useRef(0);
-  const { showToast } = useUIStore();
+  const showToast = useUIStore((s) => s.showToast);
+  const medsWindowHours = useUIStore((s) => s.medicationsWindowHours);
+  const setMedsWindowHours = useUIStore((s) => s.setMedicationsWindowHours);
 
   const userId = useAuthStore((s) => s.session?.user.id);
   const { data: activeMembership } = useActivePatientMembership(userId);
@@ -557,11 +556,11 @@ const styles = StyleSheet.create({
   },
   addTitle: {
     color: "#1F2937",
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
   },
   addSubtitle: {
     color: "rgba(31,45,61,0.72)",
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     marginTop: 2,
   },
   featuredMedsCard: {
@@ -576,20 +575,20 @@ const styles = StyleSheet.create({
   },
   featuredMedicationName: {
     color: "#1F2937",
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
   },
   featuredDueText: {
     color: "#2B6CB0",
-    fontSize: 13,
+    fontSize: theme.typography.fontSize.xs,
   },
   featuredDoseText: {
     color: "rgba(31,45,61,0.72)",
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     marginTop: 1,
   },
   listTitle: {
     marginBottom: 2,
-    fontSize: 15,
+    fontSize: theme.typography.fontSize.sm,
   },
   safeChip: {
     borderRadius: 999,
@@ -628,10 +627,10 @@ const styles = StyleSheet.create({
   },
   historyOpenTitle: {
     color: "#1F2937",
-    fontSize: 14,
+    fontSize: theme.typography.fontSize.sm,
   },
   historyOpenSubtitle: {
     color: "rgba(31,45,61,0.72)",
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
   },
 });

@@ -1,4 +1,5 @@
 import { cardStyles, colors } from "@/styles/shared-styles";
+import { theme } from "@/src/theme";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
@@ -316,7 +317,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(74,144,226,0.10)",
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: theme.typography.fontSize.lg,
     fontWeight: "800",
     color: colors.text.primary,
   },
@@ -335,7 +336,7 @@ const styles = StyleSheet.create({
   weekHeaderText: {
     width: 42,
     textAlign: "center",
-    fontSize: 13,
+    fontSize: theme.typography.fontSize.xs,
     color: colors.text.secondary,
     fontWeight: "600",
   },
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.primary,
   },
   yearText: {
-    fontSize: 15,
+    fontSize: theme.typography.fontSize.sm,
     color: colors.text.primary,
     fontWeight: "700",
   },
@@ -386,7 +387,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.primary,
   },
   cellText: {
-    fontSize: 15,
+    fontSize: theme.typography.fontSize.sm,
     color: colors.text.primary,
     fontWeight: "600",
   },

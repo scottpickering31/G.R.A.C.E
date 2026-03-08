@@ -5,6 +5,7 @@ import {
 } from "@/src/api/onboarding/hooks";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
+import { theme } from "@/src/theme";
 import { useAuthStore } from "@/src/state/auth.store";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
@@ -72,7 +73,11 @@ export default function PostLoginGate() {
     return (
       <View style={{ flex: 1, justifyContent: "center", padding: 20, gap: 12 }}>
         <AppText
-          style={{ fontSize: 18, fontWeight: "800", textAlign: "center" }}
+          style={{
+            fontSize: theme.typography.fontSize.lg,
+            fontWeight: "800",
+            textAlign: "center",
+          }}
         >
           We couldn’t check your account right now.
         </AppText>

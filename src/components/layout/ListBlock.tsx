@@ -81,7 +81,7 @@ export default function ListBlock({
           </AppText>
 
           {!!subtitle && (
-            <AppText style={styles.subtitle} numberOfLines={1}>
+            <AppText style={styles.subtitle} numberOfLines={2}>
               {subtitle}
             </AppText>
           )}
@@ -124,6 +124,7 @@ const styles = StyleSheet.create({
   },
   textCol: {
     flex: 1,
+    minWidth: 0,
     marginLeft: 8,
     gap: 2,
   },
@@ -144,15 +145,17 @@ const styles = StyleSheet.create({
   rightCol: {
     flexDirection: "row",
     alignItems: "center",
-    marginLeft: 10,
+    marginLeft: 8,
+    maxWidth: "42%",
+    flexShrink: 1,
     borderRadius: 45,
   },
   rightText: {
-    fontSize: 13,
+    fontSize: theme.typography.fontSize.xs,
     fontWeight: "600",
     color: colors.text.secondary,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

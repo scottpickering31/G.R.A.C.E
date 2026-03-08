@@ -5,6 +5,7 @@ import PillButton from "@/src/components/buttons/PillButton";
 import { useNotificationsPermission } from "@/src/permissions/useNotificationsPermission";
 import { useAuthStore } from "@/src/state/auth.store";
 import { useUIStore } from "@/src/state/ui.store";
+import { theme } from "@/src/theme";
 import { PermissionState } from "@/src/types/notifications";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
@@ -28,7 +29,9 @@ function StatusPill({ status }: { status: PermissionState }) {
         backgroundColor: "rgba(255,255,255,0.7)",
       }}
     >
-      <AppText style={{ fontSize: 12, fontWeight: "700" }}>{label}</AppText>
+      <AppText style={{ fontSize: theme.typography.fontSize.xs, fontWeight: "700" }}>
+        {label}
+      </AppText>
     </View>
   );
 }
@@ -78,7 +81,13 @@ export default function Permissions() {
 
   return (
     <View style={{ flex: 1, padding: 20, gap: 16, justifyContent: "center" }}>
-      <AppText style={{ fontSize: 26, fontWeight: "900", textAlign: "center" }}>
+      <AppText
+        style={{
+          fontSize: theme.typography.fontSize["2xl"],
+          fontWeight: "900",
+          textAlign: "center",
+        }}
+      >
         Enable what helps you most
       </AppText>
 
@@ -96,7 +105,7 @@ export default function Permissions() {
             alignItems: "center",
           }}
         >
-          <AppText style={{ fontSize: 18, fontWeight: "800" }}>
+          <AppText style={{ fontSize: theme.typography.fontSize.lg, fontWeight: "800" }}>
             Notifications
           </AppText>
           <StatusPill status={notif.status} />
@@ -122,7 +131,7 @@ export default function Permissions() {
 
       {/* Deferred permissions note */}
       <View style={{ gap: 8, marginTop: 8 }}>
-        <AppText style={{ fontSize: 18, fontWeight: "800" }}>
+        <AppText style={{ fontSize: theme.typography.fontSize.lg, fontWeight: "800" }}>
           Photos & Videos
         </AppText>
         <AppText style={{ opacity: 0.8 }}>

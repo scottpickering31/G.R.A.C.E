@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 36,
+    fontSize: theme.typography.fontSize["3xl"],
     letterSpacing: 3,
     color: "#3D2E84",
     textShadowColor: "rgba(255,255,255,0.95)",

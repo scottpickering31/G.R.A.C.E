@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
   weekHeaderText: {
     width: 38,
     textAlign: "center",
-    fontSize: 13,
+    fontSize: theme.typography.fontSize.xs,
     color: colors.text.secondary,
     fontWeight: "500",
   },
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   dayText: {
-    fontSize: 20,
+    fontSize: theme.typography.fontSize.lg,
     color: colors.text.primary,
     fontWeight: "500",
     paddingVertical: 6,
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   activeDayText: {
-    fontSize: 22,
+    fontSize: theme.typography.fontSize.xl,
     color: "#fff",
     fontWeight: "800",
   },

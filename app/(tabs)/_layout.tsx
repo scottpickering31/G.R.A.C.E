@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "white",
-    fontSize: 10,
+    fontSize: theme.typography.fontSize.xs,
     fontWeight: "700",
     lineHeight: 12,
   },

@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   },
   rowChevron: {
     color: theme.colors.text.muted,
-    fontSize: 20,
+    fontSize: theme.typography.fontSize.xl,
     lineHeight: 20,
   },
 });

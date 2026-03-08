@@ -4,9 +4,11 @@ import ListBlock from "@/components/layout/ListBlock";
 import Screen from "@/components/layout/Screen";
 import Section from "@/components/layout/Section";
 import {
+  useMedications,
   usePrimaryPatientId,
   useUpcomingMedicationDoses,
 } from "@/src/api/medications/hooks";
+import { useAppointments } from "@/src/api/appointments/hooks";
 import AppText from "@/src/components/AppText";
 import CurrentTime from "@/src/components/calendar/CurrentTime";
 import MedsDueModal, {
@@ -16,6 +18,7 @@ import MedsDueModal, {
 import SwipeableTabScreen from "@/src/components/navigation/SwipeableTabScreen";
 import ProfileHeader from "@/src/components/profile/ProfileHeader";
 import { useAuthStore } from "@/src/state/auth.store";
+import { useUIStore } from "@/src/state/ui.store";
 import { theme } from "@/src/theme";
 import { colors } from "@/styles/shared-styles";
 import { router } from "expo-router";
@@ -28,7 +31,7 @@ import {
   Package,
   Pill,
 } from "lucide-react-native";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 function format24HourWithMeridiem(d: Date) {
@@ -45,33 +48,69 @@ function format24HourWithMeridiem(d: Date) {
   return `${time24} ${suffix}`;
 }
 
+function getHomeStockLevel(med: {
+  stock_quantity: number | null;
+  low_stock_threshold: number | null;
+  stock_capacity: number | null;
+}) {
+  const qty = med.stock_quantity;
+  const threshold = med.low_stock_threshold;
+
+  if (qty == null) return "unset" as const;
+  if (qty <= 0) return "critical" as const;
+  if (threshold != null) {
+    if (qty <= threshold) return "critical" as const;
+    if (qty <= threshold * 1.5) return "watch" as const;
+  }
+  if (med.stock_capacity != null && med.stock_capacity > 0) {
+    const fillRatio = qty / med.stock_capacity;
+    if (fillRatio <= 0.25) return "watch" as const;
+  }
+  return "healthy" as const;
+}
+
 export default function Dashboard() {
   const [showMedsDue, setShowMedsDue] = useState(false);
-  const [medsWindowHours, setMedsWindowHours] =
-    useState<MedsDueWindowHours>(24);
+  const medsWindowHours = useUIStore((s) => s.medicationsWindowHours);
+  const setMedsWindowHours = useUIStore((s) => s.setMedicationsWindowHours);
   const userId = useAuthStore((s) => s.session?.user.id);
   const { data: primaryPatientId, refetch: refetchPrimaryPatient } =
     usePrimaryPatientId(userId);
   const { data: upcomingMedsData, refetch: refetchUpcomingMeds } =
     useUpcomingMedicationDoses(primaryPatientId ?? undefined, medsWindowHours);
-  const { data: nextHourMedsData, refetch: refetchNextHourMeds } =
-    useUpcomingMedicationDoses(primaryPatientId ?? undefined, 1);
+  const { data: appointmentsData, refetch: refetchAppointments } =
+    useAppointments(primaryPatientId ?? undefined);
+  const { data: medicationsData, refetch: refetchMedications } = useMedications(
+    primaryPatientId ?? undefined,
+  );
   const sortedMeds: UpcomingMedication[] = upcomingMedsData ?? [];
-  const nextHourMedsCount = nextHourMedsData?.length ?? 0;
+  const upcomingAppointmentsCount = useMemo(() => {
+    const now = Date.now();
+    const appointments = appointmentsData ?? [];
+    return appointments.filter((item) => {
+      const startsAtMs = new Date(item.startsAt).getTime();
+      return Number.isFinite(startsAtMs) && startsAtMs >= now && !item.completed;
+    }).length;
+  }, [appointmentsData]);
+  const stockStatusLabel = useMemo(() => {
+    const medications = medicationsData ?? [];
+    const critical = medications.filter(
+      (med) => getHomeStockLevel(med) === "critical",
+    ).length;
+    if (critical > 0) return `${critical} Critical`;
+    const low = medications.filter((med) => getHomeStockLevel(med) === "watch").length;
+    if (low > 0) return `${low} Low`;
+    return "All Good";
+  }, [medicationsData]);
   const nextDue = sortedMeds[0];
   const nextDueLabel = nextDue
     ? format24HourWithMeridiem(nextDue.dueAt)
     : "No medications due";
+  const nextDueTitle = nextDue ? nextDue.name : "No medications due";
+  const nextDueDose = nextDue ? nextDue.dose : "No dose set";
   const medsDueSubtitle = nextDue
     ? `${nextDue.name} - ${nextDue.dose}`
     : "No medications due";
-  const medsWindowLabel =
-    medsWindowHours === 1
-      ? "Next hour"
-      : medsWindowHours === 24
-        ? "Next 24 hours"
-        : "Next 7 days";
-
   return (
     <SwipeableTabScreen activeRoute="/(tabs)">
       <Screen
@@ -82,7 +121,8 @@ export default function Dashboard() {
           onRefresh={async () => {
             await refetchPrimaryPatient();
             await refetchUpcomingMeds();
-            await refetchNextHourMeds();
+            await refetchAppointments();
+            await refetchMedications();
           }}
         >
           <View style={styles.headerRow}>
@@ -109,61 +149,52 @@ export default function Dashboard() {
             </View>
           </Card>
 
-          <View style={styles.quickMetricsRow}>
-            <Card
-              elevationActive={true}
-              borderActive={true}
-              padding="md"
-              style={styles.metricCard}
-            >
-              <AppText style={styles.metricLabel}>Due in next hour</AppText>
-              <AppText weight="bold" style={styles.metricValue}>
-                {nextHourMedsCount}
-              </AppText>
-              <AppText style={styles.metricSubLabel}>Medications</AppText>
-            </Card>
-
-            <Card
-              elevationActive={true}
-              borderActive={true}
-              padding="md"
-              style={styles.metricCard}
-            >
-              <AppText style={styles.metricLabel}>Current Time</AppText>
-              <View style={styles.timeRow}>
-                <Clock size={14} color="#4A90E2" />
-                <CurrentTime />
-              </View>
-              <AppText style={styles.metricSubLabel}>Live</AppText>
-            </Card>
-
-            <Card
-              elevationActive={true}
-              borderActive={true}
-              padding="md"
-              style={styles.metricCard}
-            >
-              <AppText style={styles.metricLabel}>Stock</AppText>
-              <AppText weight="bold" style={styles.metricValue}>
-                Track
-              </AppText>
-              <Pressable onPress={() => router.push("/stock")}>
-                <AppText style={styles.metricLink}>Open</AppText>
-              </Pressable>
-            </Card>
-          </View>
-
           <Card elevationActive={true} borderActive={true} padding={"md"}>
             <View style={styles.sectionTitleRow}>
               <AppText style={styles.sectionTitle}>Today&apos;s Tasks</AppText>
+              <View style={styles.tasksTimeChip}>
+                <Clock size={14} color={theme.colors.brand.dark} />
+                <CurrentTime />
+              </View>
             </View>
             <Card elevationActive={false} borderActive={false} padding={"none"}>
               <View>
+                <View style={styles.windowSelectorRow}>
+                  {(
+                    [
+                      [1, "Hourly"],
+                      [24, "24 Hours"],
+                      [168, "7 Days"],
+                    ] as [MedsDueWindowHours, string][]
+                  ).map(([hours, label]) => {
+                    const active = medsWindowHours === hours;
+                    return (
+                      <Pressable
+                        key={hours}
+                        style={[
+                          styles.windowSelectorChip,
+                          active && styles.windowSelectorChipActive,
+                        ]}
+                        onPress={() => setMedsWindowHours(hours)}
+                      >
+                        <AppText
+                          style={[
+                            styles.windowSelectorChipText,
+                            active && styles.windowSelectorChipTextActive,
+                          ]}
+                        >
+                          {label}
+                        </AppText>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
                 <ListBlock
                   Icon={Pill}
                   iconBgColor="rgba(74, 144, 226, 0.18)"
-                  title={`Meds Due (${medsWindowLabel})`}
-                  subtitle={medsDueSubtitle}
+                  title={nextDueTitle}
+                  subtitle={nextDueDose}
                   thirdSubtitle={nextDueLabel}
                   rightText={`${sortedMeds.length} Medications`}
                   rightTextContainer={{
@@ -176,8 +207,10 @@ export default function Dashboard() {
                   Icon={CalendarClock}
                   iconBgColor="rgba(126, 200, 160, 0.22)"
                   title="Appointments"
-                  subtitle="Tap to review today's schedule"
-                  rightText="Open"
+                  subtitle="Review today's schedule"
+                  rightText={`${upcomingAppointmentsCount} ${
+                    upcomingAppointmentsCount === 1 ? "Appointment" : "Appointments"
+                  }`}
                   rightTextContainer={{
                     backgroundColor: "rgba(126, 200, 160, 0.22)",
                   }}
@@ -189,6 +222,10 @@ export default function Dashboard() {
                   iconBgColor="rgba(245, 193, 108, 0.25)"
                   title="Stock"
                   subtitle="Check low supplies and refill status"
+                  rightText={stockStatusLabel}
+                  rightTextContainer={{
+                    backgroundColor: "rgba(245, 193, 108, 0.25)",
+                  }}
                   onPress={() => router.push("/stock")}
                 />
 
@@ -318,6 +355,33 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: theme.colors.brand.dark,
   },
+  windowSelectorRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 8,
+  },
+  windowSelectorChip: {
+    flex: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.14)",
+    backgroundColor: "rgba(255,255,255,0.92)",
+    paddingVertical: 9,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  windowSelectorChipActive: {
+    borderColor: "rgba(74,144,226,0.24)",
+    backgroundColor: "rgba(74,144,226,0.12)",
+  },
+  windowSelectorChipText: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.secondary,
+    fontWeight: "600",
+  },
+  windowSelectorChipTextActive: {
+    color: theme.colors.brand.dark,
+  },
   quickMetricsRow: {
     flexDirection: "row",
     gap: 8,
@@ -346,12 +410,6 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.xs,
     fontWeight: "600",
   },
-  timeRow: {
-    marginTop: 4,
-    flexDirection: "row",
-    gap: 4,
-    alignItems: "center",
-  },
   sectionTitleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -360,6 +418,17 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: "700",
+  },
+  tasksTimeChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.2)",
+    backgroundColor: "rgba(255,255,255,0.72)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
   },
   miniAction: {
     borderRadius: 999,

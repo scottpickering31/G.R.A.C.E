@@ -165,6 +165,13 @@ export default function PatientProfiles() {
                     <AppText style={styles.metaText}>
                       Access Role: {roleLabel(patient.role)}
                     </AppText>
+                    {patient.role === "read_only" ? (
+                      <View style={styles.linkedBadge}>
+                        <AppText style={styles.linkedBadgeText}>
+                          Linked via Secret Code
+                        </AppText>
+                      </View>
+                    ) : null}
                     <AppText style={styles.viewHintText}>Tap to view profile details</AppText>
                     {!isActive ? (
                       <Pressable
@@ -429,6 +436,21 @@ const styles = StyleSheet.create({
     marginTop: 2,
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.xs,
+  },
+  linkedBadge: {
+    marginTop: 6,
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.32)",
+    backgroundColor: "rgba(74,144,226,0.14)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  linkedBadgeText: {
+    color: theme.colors.brand.dark,
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: "700",
   },
   setActiveBtn: {
     marginTop: 8,

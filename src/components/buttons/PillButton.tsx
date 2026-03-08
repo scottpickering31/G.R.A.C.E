@@ -1,4 +1,5 @@
 import { LinearGradientStyle } from "@/src/components/layout/LinearGradientContainer";
+import { theme } from "@/src/theme";
 import { GradientProps } from "@/src/types/gradient.types";
 import { PillButtonProps } from "@/src/types/pill-button.types";
 import { cardStyles } from "@/styles/shared-styles";
@@ -149,14 +150,14 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    fontSize: 16,
+    fontSize: theme.typography.fontSize.md,
     fontWeight: "600",
     color: "#1F2937",
   },
 
   subtitle: {
     marginTop: 2,
-    fontSize: 12,
+    fontSize: theme.typography.fontSize.xs,
     fontWeight: "400",
     color: "#1F2937",
     opacity: 0.8,

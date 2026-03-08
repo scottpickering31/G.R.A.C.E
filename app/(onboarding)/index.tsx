@@ -115,7 +115,11 @@ export default function Welcome() {
           gradientColors={["#63D6C5", "#8A76FF"]}
           borderActive={false}
           elevationActive={true}
-          textStyle={{ color: "white", fontWeight: "800", fontSize: 18 }}
+          textStyle={{
+            color: "white",
+            fontWeight: "800",
+            fontSize: theme.typography.fontSize.lg,
+          }}
           style={{ minHeight: 56, paddingVertical: 16 }}
           textContainerStyle={{ alignItems: "center" }}
         />

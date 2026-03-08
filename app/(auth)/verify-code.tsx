@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.95)",
     paddingHorizontal: 12,
     paddingVertical: 14,
-    fontSize: 30,
+    fontSize: theme.typography.fontSize["2xl"],
     letterSpacing: 8,
     textAlign: "center",
     color: theme.colors.text.primary,

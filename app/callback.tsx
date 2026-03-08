@@ -1,6 +1,7 @@
 import Loading from "@/src/components/Loading";
 import { supabase } from "@/services/supabase";
 import AppText from "@/src/components/AppText";
+import { theme } from "@/src/theme";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
@@ -77,7 +78,13 @@ export default function AuthCallback() {
 
   return (
     <View style={{ flex: 1, justifyContent: "center", padding: 20, gap: 12 }}>
-      <AppText style={{ fontSize: 18, fontWeight: "800", textAlign: "center" }}>
+      <AppText
+        style={{
+          fontSize: theme.typography.fontSize.lg,
+          fontWeight: "800",
+          textAlign: "center",
+        }}
+      >
         Verification failed
       </AppText>
       <AppText style={{ textAlign: "center", opacity: 0.75 }}>{error}</AppText>
