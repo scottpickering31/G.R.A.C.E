@@ -33,24 +33,28 @@ const ITEMS = [
     subtitle: "View and manage care plans and treatment goals.",
     href: "/(tabs)/(pages)/medical-plans",
     Icon: ClipboardList,
+    comingSoon: true,
   },
   {
     label: "Notes, Logs & Media",
     subtitle: "Track notes, uploads, and patient activity logs.",
     href: "/(tabs)/(pages)/notes-logs-media",
     Icon: FileText,
+    comingSoon: true,
   },
   {
     label: "Allergies & Alerts",
     subtitle: "Review important allergy and alert information.",
     href: "/(tabs)/(pages)/allergies-alerts",
     Icon: BellRing,
+    comingSoon: true,
   },
   {
     label: "Emergency",
     subtitle: "Open emergency contacts and urgent guidance.",
     href: "/(tabs)/(pages)/emergency",
     Icon: ShieldAlert,
+    comingSoon: true,
   },
 ] as const;
 
@@ -75,7 +79,11 @@ export default function More() {
               title={item.label}
               subtitle={item.subtitle}
               Icon={item.Icon}
-              onPress={() => router.push(item.href)}
+              comingSoon={!!item.comingSoon}
+              onPress={() => {
+                if (item.comingSoon) return;
+                router.push(item.href);
+              }}
             />
           ))}
         </Section>
@@ -89,26 +97,48 @@ function MoreRow({
   subtitle,
   Icon,
   onPress,
+  comingSoon = false,
 }: {
   title: string;
   subtitle: string;
   Icon: LucideIcon;
   onPress: () => void;
+  comingSoon?: boolean;
 }) {
   return (
-    <Pressable style={styles.row} onPress={onPress}>
-      <View style={styles.rowIconWrap}>
-        <Icon size={25} color={theme.colors.brand.dark} />
+    <Pressable
+      style={[styles.row, comingSoon && styles.rowDisabled]}
+      onPress={onPress}
+      disabled={comingSoon}
+    >
+      <View style={[styles.rowIconWrap, comingSoon && styles.rowIconWrapDisabled]}>
+        <Icon
+          size={25}
+          color={comingSoon ? theme.colors.text.muted : theme.colors.brand.dark}
+        />
       </View>
       <View style={{ flex: 1 }}>
-        <AppText weight="semibold" style={styles.rowTitle}>
+        <AppText
+          weight="semibold"
+          style={[styles.rowTitle, comingSoon && styles.rowTitleDisabled]}
+        >
           {title}
         </AppText>
-        <AppText style={styles.rowSubtitle}>{subtitle}</AppText>
+        <AppText style={[styles.rowSubtitle, comingSoon && styles.rowSubtitleDisabled]}>
+          {comingSoon ? `${subtitle} • Coming Soon` : subtitle}
+        </AppText>
       </View>
-      <AppText weight="bold" style={styles.rowChevron}>
-        ›
-      </AppText>
+      {comingSoon ? (
+        <View style={styles.comingSoonPill}>
+          <AppText weight="bold" style={styles.comingSoonPillText}>
+            Soon
+          </AppText>
+        </View>
+      ) : (
+        <AppText weight="bold" style={styles.rowChevron}>
+          ›
+        </AppText>
+      )}
     </Pressable>
   );
 }
@@ -156,6 +186,10 @@ const styles = StyleSheet.create({
     gap: 15,
     height: 80,
   },
+  rowDisabled: {
+    backgroundColor: "rgba(240,244,248,0.9)",
+    borderColor: "rgba(154,167,182,0.26)",
+  },
   rowIconWrap: {
     width: 50,
     height: 50,
@@ -164,17 +198,38 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "rgba(74,144,226,0.13)",
   },
+  rowIconWrapDisabled: {
+    backgroundColor: "rgba(154,167,182,0.18)",
+  },
   rowTitle: {
     fontSize: theme.typography.fontSize.lg,
+  },
+  rowTitleDisabled: {
+    color: theme.colors.text.secondary,
   },
   rowSubtitle: {
     marginTop: 2,
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.sm,
   },
+  rowSubtitleDisabled: {
+    color: theme.colors.text.muted,
+  },
   rowChevron: {
     color: theme.colors.text.muted,
     fontSize: theme.typography.fontSize.xl,
     lineHeight: 20,
+  },
+  comingSoonPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(154,167,182,0.34)",
+    backgroundColor: "rgba(154,167,182,0.18)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  comingSoonPillText: {
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
   },
 });
