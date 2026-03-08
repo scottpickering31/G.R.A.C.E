@@ -7,7 +7,10 @@ import {
   useSetAppointmentCompleted,
   useUpsertAppointment,
 } from "@/src/api/appointments/hooks";
-import { usePrimaryPatientId } from "@/src/api/medications/hooks";
+import {
+  useActivePatientMembership,
+  usePrimaryPatientId,
+} from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
 import CollapsibleCalendar from "@/src/components/calendar/CollapsibleCalendar";
 import MonthCalendarModal from "@/src/components/calendar/MonthCalendarModal";
@@ -25,7 +28,7 @@ import {
   Stethoscope,
   TriangleAlert,
 } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Modal,
   Pressable,
@@ -176,6 +179,7 @@ function emptyForm(dateKey: string): AppointmentForm {
 export default function Appointments() {
   const userId = useAuthStore((s) => s.session?.user.id);
   const { showToast } = useUIStore();
+  const { data: activeMembership } = useActivePatientMembership(userId);
   const { data: primaryPatientId, refetch: refetchPrimaryPatient } =
     usePrimaryPatientId(userId);
   const {
@@ -200,6 +204,18 @@ export default function Appointments() {
     () => appointmentsData ?? [],
     [appointmentsData],
   );
+  const isReadOnly = activeMembership?.role === "read_only";
+
+  useEffect(() => {
+    if (!isReadOnly) return;
+    if (showEditor) {
+      setShowEditor(false);
+      setShowTimePicker(false);
+      setShowDatePicker(false);
+      setEditingId(null);
+      showToast("Read-only access: unable to add or edit appointments.", "info");
+    }
+  }, [isReadOnly, showEditor, showToast]);
 
   const nowTs = Date.now();
   const selectedDateKey = formatDateKey(date);
@@ -272,6 +288,10 @@ export default function Appointments() {
   ).length;
 
   const openCreate = () => {
+    if (isReadOnly) {
+      showToast("Read-only access: cannot add appointments.", "info");
+      return;
+    }
     setEditingId(null);
     setForm(emptyForm(selectedDateKey));
     setPickerHour("09");
@@ -280,6 +300,10 @@ export default function Appointments() {
   };
 
   const openEdit = (item: AppointmentItem) => {
+    if (isReadOnly) {
+      showToast("Read-only access: appointment editing is disabled.", "info");
+      return;
+    }
     setEditingId(item.id);
     const editForm = asForm(item);
     const [hour = "09", minute = "00"] = editForm.time.split(":");
@@ -300,6 +324,10 @@ export default function Appointments() {
   };
 
   const saveAppointment = async () => {
+    if (isReadOnly) {
+      showToast("Read-only access: cannot save appointments.", "info");
+      return;
+    }
     if (!primaryPatientId || !userId) return;
     if (!form.title.trim()) return;
 
@@ -341,6 +369,10 @@ export default function Appointments() {
   };
 
   const toggleCompleted = async (id: string, completed: boolean) => {
+    if (isReadOnly) {
+      showToast("Read-only access: cannot change appointment status.", "info");
+      return;
+    }
     try {
       await setAppointmentCompleted.mutateAsync({
         appointmentId: id,
@@ -585,6 +617,7 @@ export default function Appointments() {
 
                         <Pressable
                           style={styles.completeBtn}
+                          disabled={isReadOnly}
                           onPress={() => toggleCompleted(item.id, !item.completed)}
                         >
                           <AppText style={styles.completeBtnText}>
@@ -605,7 +638,7 @@ export default function Appointments() {
         <Modal
           transparent
           animationType="slide"
-          visible={showEditor}
+          visible={showEditor && !isReadOnly}
           onRequestClose={closeEditor}
         >
           <Pressable style={styles.modalBackdrop} onPress={closeEditor}>

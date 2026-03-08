@@ -1,6 +1,7 @@
 import { theme } from "@/src/theme";
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AppText from "../AppText";
 
 export type MedsDueWindowHours = 1 | 24 | 168;
@@ -62,6 +63,7 @@ export default function MedsDueModal({
 }: Props) {
   const [now, setNow] = useState(new Date());
   const [showWindowOptions, setShowWindowOptions] = useState(false);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!visible) return;
@@ -88,7 +90,10 @@ export default function MedsDueModal({
       onRequestClose={onClose}
     >
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+        <Pressable
+          style={[styles.sheet, { paddingBottom: 16 + Math.max(insets.bottom, 8) }]}
+          onPress={() => {}}
+        >
           <AppText weight="bold" style={styles.title}>
             Upcoming Medications
           </AppText>

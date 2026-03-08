@@ -4,6 +4,7 @@ import { theme } from "@/src/theme";
 import { ChevronDown } from "lucide-react-native";
 import React from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Props = {
   visible: boolean;
@@ -14,6 +15,7 @@ type Props = {
     status: "taken" | "skipped" | "rejected",
   ) => Promise<void> | void;
   isSaving?: boolean;
+  canEdit?: boolean;
 };
 
 const STATUS_OPTIONS: ("taken" | "skipped" | "rejected")[] = [
@@ -46,8 +48,10 @@ export default function MedicationHistoryModal({
   items,
   onChangeStatus,
   isSaving = false,
+  canEdit = true,
 }: Props) {
   const [openItemId, setOpenItemId] = React.useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   React.useEffect(() => {
     if (!visible) setOpenItemId(null);
@@ -61,7 +65,10 @@ export default function MedicationHistoryModal({
       onRequestClose={onClose}
     >
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+        <Pressable
+          style={[styles.sheet, { paddingBottom: 16 + Math.max(insets.bottom, 8) }]}
+          onPress={() => {}}
+        >
           <View style={styles.headerRow}>
             <AppText weight="bold" style={styles.title}>
               Medication History
@@ -102,15 +109,17 @@ export default function MedicationHistoryModal({
                         item.status === "skipped" && styles.historyStatusSkipped,
                         item.status === "rejected" && styles.historyStatusRejected,
                       ]}
-                      disabled={isSaving}
+                      disabled={isSaving || !canEdit}
                       onPress={() =>
                         setOpenItemId((prev) => (prev === item.id ? null : item.id))
                       }
                     >
                       <AppText style={styles.historyStatusText}>{item.status}</AppText>
-                      <ChevronDown size={13} color={theme.colors.text.primary} />
+                      {canEdit ? (
+                        <ChevronDown size={13} color={theme.colors.text.primary} />
+                      ) : null}
                     </Pressable>
-                    {openItemId === item.id ? (
+                    {openItemId === item.id && canEdit ? (
                       <View style={styles.statusMenu}>
                         {STATUS_OPTIONS.map((option) => {
                           const active = option === item.status;

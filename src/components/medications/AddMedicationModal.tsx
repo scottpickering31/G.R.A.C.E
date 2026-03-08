@@ -18,6 +18,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Props = {
   visible: boolean;
@@ -110,6 +111,7 @@ export default function AddMedicationModal({
   userId,
 }: Props) {
   const { showToast } = useUIStore();
+  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedRxcui, setSelectedRxcui] = useState<string | null>(null);
@@ -422,8 +424,14 @@ export default function AddMedicationModal({
       onRequestClose={close}
     >
       <Pressable style={styles.backdrop} onPress={close}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
-          <ScrollView keyboardShouldPersistTaps="handled">
+        <Pressable
+          style={[styles.sheet, { paddingBottom: 16 + Math.max(insets.bottom, 8) }]}
+          onPress={() => {}}
+        >
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 8) }}
+          >
             <View style={styles.header}>
               <AppText weight="bold" style={styles.title}>
                 Add Medication

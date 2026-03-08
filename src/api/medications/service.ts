@@ -26,6 +26,11 @@ export type PrimaryPatient = {
   dob: string | null;
 };
 
+export type ActivePatientMembership = {
+  patientId: string;
+  role: Database["public"]["Enums"]["patient_role"];
+};
+
 export type AccessiblePatient = {
   id: string;
   display_name: string;
@@ -198,6 +203,28 @@ export async function getPrimaryPatient(userId: string): Promise<PrimaryPatient 
     id: patient.id,
     display_name: patient.display_name,
     dob: patient.dob,
+  };
+}
+
+export async function getActivePatientMembership(
+  userId: string,
+): Promise<ActivePatientMembership | null> {
+  const activePatientId = await getPrimaryPatientId(userId);
+  if (!activePatientId) return null;
+
+  const { data, error } = await supabase
+    .from("patient_members")
+    .select("patient_id,role")
+    .eq("user_id", userId)
+    .eq("patient_id", activePatientId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    patientId: data.patient_id,
+    role: data.role,
   };
 }
 

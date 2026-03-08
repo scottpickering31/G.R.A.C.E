@@ -2,6 +2,7 @@ import { cardStyles, colors } from "@/styles/shared-styles";
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AppText from "../AppText";
 
 type Props = {
@@ -53,6 +54,7 @@ export default function MonthCalendarModal({
 }: Props) {
   const [cursor, setCursor] = useState<Date>(startOfMonth(initialDate));
   const [showYearPicker, setShowYearPicker] = useState(false);
+  const insets = useSafeAreaInsets();
   const selected = initialDate;
 
   useEffect(() => {
@@ -121,7 +123,14 @@ export default function MonthCalendarModal({
       onRequestClose={onClose}
     >
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={[styles.sheet, cardStyles.border]} onPress={() => {}}>
+        <Pressable
+          style={[
+            styles.sheet,
+            cardStyles.border,
+            { paddingBottom: 16 + Math.max(insets.bottom, 8) },
+          ]}
+          onPress={() => {}}
+        >
           <View style={styles.header}>
             <Pressable
               onPress={() =>

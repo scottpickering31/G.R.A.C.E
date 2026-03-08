@@ -1,17 +1,22 @@
 import BackToHomeButton from "@/components/buttons/BackToHomeButton";
+import { useOwnerPendingAccessRequests } from "@/src/api/access/hooks";
 import Loading from "@/src/components/Loading";
 import { theme } from "@/src/theme";
 import { useAuthStore } from "@/state/auth.store";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, Tabs, usePathname, useRouter } from "expo-router";
-import { Pressable } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
   const router = useRouter();
   const pathname = usePathname();
-  // const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets();
   const session = useAuthStore((s) => s.session);
   const hydrated = useAuthStore((s) => s.hydrated);
+  const userId = session?.user.id;
+  const { data: ownerPendingRequests } = useOwnerPendingAccessRequests(userId);
+  const pendingCount = ownerPendingRequests?.length ?? 0;
 
   if (!hydrated) return <Loading />;
   if (!session) return <Redirect href="/(auth)/post-login" />;
@@ -24,12 +29,25 @@ export default function TabsLayout() {
         headerLeft: () => <BackToHomeButton />,
         headerRight: () =>
           pathname === "/(tabs)/(pages)/user-profile" ? null : (
-            <Pressable
-              onPress={() => router.push("/(tabs)/(pages)/user-profile")}
-              style={{ paddingHorizontal: 15 }}
-            >
-              <Ionicons name="settings-outline" size={24} color="#1F2937" />
-            </Pressable>
+            <View style={styles.headerActionsRow}>
+              <Pressable
+                onPress={() => router.push("/(tabs)/(pages)/notifications")}
+                style={styles.iconButton}
+              >
+                <Ionicons name="notifications-outline" size={22} color="#1F2937" />
+                {pendingCount > 0 ? (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{pendingCount > 9 ? "9+" : pendingCount}</Text>
+                  </View>
+                ) : null}
+              </Pressable>
+              <Pressable
+                onPress={() => router.push("/(tabs)/(pages)/user-profile")}
+                style={styles.iconButton}
+              >
+                <Ionicons name="settings-outline" size={24} color="#1F2937" />
+              </Pressable>
+            </View>
           ),
         headerTransparent: true,
         headerShadowVisible: false,
@@ -38,8 +56,9 @@ export default function TabsLayout() {
         tabBarStyle: {
           borderColor: "rgba(30, 58, 138, 0.2)",
           backgroundColor: "rgba(255, 255, 255, 0.95)",
-          height: "10%",
-          paddingTop: 15,
+          height: 64 + Math.max(insets.bottom, 8),
+          paddingTop: 8,
+          paddingBottom: Math.max(insets.bottom, 8),
           paddingHorizontal: 0,
           // shadow (iOS)
           shadowColor: "#000",
@@ -158,6 +177,10 @@ export default function TabsLayout() {
         options={{ href: null, title: "Patient Profiles" }}
       />
       <Tabs.Screen
+        name="(pages)/notifications"
+        options={{ href: null, title: "Notifications" }}
+      />
+      <Tabs.Screen
         name="(pages)/patient-profile/[patientId]"
         options={{ href: null, title: "Patient Profile" }}
       />
@@ -188,3 +211,36 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  headerActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 8,
+  },
+  iconButton: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 6,
+  },
+  badge: {
+    position: "absolute",
+    top: 3,
+    right: 3,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 999,
+    backgroundColor: "#D14343",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "700",
+    lineHeight: 12,
+  },
+});

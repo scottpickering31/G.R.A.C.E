@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ActivePatientMembership,
   AccessiblePatient,
   clearMedicationHistoryException,
   ClearMedicationHistoryExceptionInput,
@@ -10,6 +11,7 @@ import {
   deleteMedication,
   getMedicationHistory,
   getMedications,
+  getActivePatientMembership,
   getAccessiblePatients,
   getPatientProfileDetails,
   getPrimaryPatient,
@@ -40,6 +42,15 @@ export function usePrimaryPatient(userId?: string) {
     queryFn: () => getPrimaryPatient(userId!),
     enabled: !!userId,
     staleTime: 60_000,
+  });
+}
+
+export function useActivePatientMembership(userId?: string) {
+  return useQuery<ActivePatientMembership | null>({
+    queryKey: ["active-patient-membership", userId],
+    queryFn: () => getActivePatientMembership(userId!),
+    enabled: !!userId,
+    staleTime: 30_000,
   });
 }
 
@@ -176,6 +187,7 @@ export function useSetActivePatient(userId?: string) {
       qc.invalidateQueries({ queryKey: ["accessible-patients", userId] });
       qc.invalidateQueries({ queryKey: ["primary-patient-id", userId] });
       qc.invalidateQueries({ queryKey: ["primary-patient", userId] });
+      qc.invalidateQueries({ queryKey: ["active-patient-membership", userId] });
       qc.invalidateQueries({ queryKey: ["patient-profile-details", userId] });
       qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["medications"] });
@@ -195,6 +207,7 @@ export function useCreatePatientProfile(userId?: string) {
       qc.invalidateQueries({ queryKey: ["accessible-patients", userId] });
       qc.invalidateQueries({ queryKey: ["primary-patient-id", userId] });
       qc.invalidateQueries({ queryKey: ["primary-patient", userId] });
+      qc.invalidateQueries({ queryKey: ["active-patient-membership", userId] });
     },
   });
 }

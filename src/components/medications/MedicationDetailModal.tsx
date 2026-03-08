@@ -16,12 +16,14 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   medication: MedicationListItem | null;
   patientId?: string;
+  canEdit?: boolean;
 };
 
 const UNIT_OPTIONS = [
@@ -177,8 +179,10 @@ export default function MedicationDetailModal({
   onClose,
   medication,
   patientId,
+  canEdit = true,
 }: Props) {
   const { showToast } = useUIStore();
+  const insets = useSafeAreaInsets();
   const updateMedication = useUpdateMedication(patientId);
   const deleteMedication = useDeleteMedication(patientId);
 
@@ -237,6 +241,12 @@ export default function MedicationDetailModal({
     setShowDoseUnits(false);
     setShowStockUnits(false);
   }, [medication, visible]);
+
+  useEffect(() => {
+    if (canEdit) return;
+    setIsEditing(false);
+    setConfirmDelete(false);
+  }, [canEdit]);
 
   const stockPercent = useMemo(() => {
     if (!medication) return null;
@@ -331,8 +341,14 @@ export default function MedicationDetailModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
-          <ScrollView keyboardShouldPersistTaps="handled">
+        <Pressable
+          style={[styles.sheet, { paddingBottom: 16 + Math.max(insets.bottom, 8) }]}
+          onPress={() => {}}
+        >
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 8) }}
+          >
             <AppText weight="bold" style={styles.title}>
               {medication.name}
             </AppText>
@@ -598,16 +614,28 @@ export default function MedicationDetailModal({
                   <Pressable style={styles.secondaryBtn} onPress={onClose}>
                     <AppText>Close</AppText>
                   </Pressable>
-                  <Pressable style={styles.primaryBtn} onPress={() => setIsEditing(true)}>
-                    <AppText style={styles.primaryBtnText}>Edit</AppText>
+                  <Pressable
+                    style={[styles.primaryBtn, !canEdit && styles.disabledBtn]}
+                    onPress={() => setIsEditing(true)}
+                    disabled={!canEdit}
+                  >
+                    <AppText style={[styles.primaryBtnText, !canEdit && styles.disabledBtnText]}>
+                      Edit
+                    </AppText>
                   </Pressable>
                 </>
               )}
             </View>
 
             {!isEditing ? (
-              <Pressable style={styles.deleteGhostBtn} onPress={() => setConfirmDelete(true)}>
-                <AppText style={styles.deleteGhostText}>Delete Medication</AppText>
+              <Pressable
+                style={[styles.deleteGhostBtn, !canEdit && styles.disabledBtn]}
+                onPress={() => setConfirmDelete(true)}
+                disabled={!canEdit}
+              >
+                <AppText style={[styles.deleteGhostText, !canEdit && styles.disabledDeleteText]}>
+                  Delete Medication
+                </AppText>
               </Pressable>
             ) : null}
           </ScrollView>
@@ -857,6 +885,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   primaryBtnText: { color: "white", fontWeight: "600" },
+  disabledBtn: {
+    opacity: 0.45,
+  },
+  disabledBtnText: {
+    color: "rgba(255,255,255,0.95)",
+  },
   deleteGhostBtn: {
     marginTop: 8,
     minHeight: 42,
@@ -870,6 +904,9 @@ const styles = StyleSheet.create({
   deleteGhostText: {
     color: "#C53030",
     fontWeight: "600",
+  },
+  disabledDeleteText: {
+    color: "rgba(197,48,48,0.85)",
   },
   deleteConfirm: {
     marginTop: 12,

@@ -1,5 +1,10 @@
 import Card from "@/components/layout/Card";
 import Section from "@/components/layout/Section";
+import {
+  usePatientAccessCode,
+  usePendingAccessRequestsForPatient,
+  useResolveAccessRequest,
+} from "@/src/api/access/hooks";
 import { usePatientProfileDetails } from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
 import Loading from "@/src/components/Loading";
@@ -41,13 +46,6 @@ function roleLabel(role: "owner" | "caregiver" | "clinician" | "read_only") {
   return role.charAt(0).toUpperCase() + role.slice(1);
 }
 
-function buildPatientAccessCode(patientId: string) {
-  const compact = patientId.replace(/-/g, "").toUpperCase();
-  const base = compact.slice(0, 12).padEnd(12, "X");
-  const groups = [base.slice(0, 4), base.slice(4, 8), base.slice(8, 12)];
-  return `PT-${groups.join("-")}`;
-}
-
 export default function PatientProfileDetailsPage() {
   const userId = useAuthStore((s) => s.session?.user.id);
   const { showToast } = useUIStore();
@@ -58,7 +56,19 @@ export default function PatientProfileDetailsPage() {
     : params.patientId;
 
   const { data, isLoading } = usePatientProfileDetails(userId, patientId);
-  const patientAccessCode = data ? buildPatientAccessCode(data.id) : null;
+  const isOwner = data?.role === "owner";
+  const { data: patientAccessCode } = usePatientAccessCode(
+    data?.id,
+    userId,
+    !!isOwner,
+  );
+  const { data: pendingRequests } = usePendingAccessRequestsForPatient(
+    isOwner ? data?.id : undefined,
+  );
+  const resolveAccessRequestMutation = useResolveAccessRequest(
+    isOwner ? data?.id : undefined,
+    userId,
+  );
 
   useFocusEffect(() => {
     return () => {
@@ -137,62 +147,141 @@ export default function PatientProfileDetailsPage() {
               <AppText weight="semibold" style={styles.sectionTitle}>
                 Care Team & Access
               </AppText>
-              <View style={styles.secretCodeWrap}>
-                <View style={styles.secretHeaderRow}>
-                  <AppText style={styles.secretLabel}>
-                    Patient Secret Code
+              {isOwner ? (
+                <View style={styles.secretCodeWrap}>
+                  <View style={styles.secretHeaderRow}>
+                    <AppText style={styles.secretLabel}>
+                      Patient Secret Code
+                    </AppText>
+                    <Pressable
+                      style={styles.secretEyeBtn}
+                      onPress={() => setShowSecretCode((prev) => !prev)}
+                    >
+                      {showSecretCode ? (
+                        <EyeOff size={15} color={theme.colors.text.secondary} />
+                      ) : (
+                        <Eye size={15} color={theme.colors.text.secondary} />
+                      )}
+                    </Pressable>
+                  </View>
+                  <AppText selectable={true} style={styles.secretValue}>
+                    {showSecretCode
+                      ? patientAccessCode ?? "Generating..."
+                      : "●●●●-●●●●-●●●●"}
                   </AppText>
-                  <Pressable
-                    style={styles.secretEyeBtn}
-                    onPress={() => setShowSecretCode((prev) => !prev)}
-                  >
-                    {showSecretCode ? (
-                      <EyeOff size={15} color={theme.colors.text.secondary} />
-                    ) : (
-                      <Eye size={15} color={theme.colors.text.secondary} />
-                    )}
-                  </Pressable>
+                  <AppText style={styles.helperText}>
+                    Share this code with family or clinicians for access to{" "}
+                    {data?.display_name ?? "Patient Profile"}
+                  </AppText>
+
+                  <View style={styles.secretActionsRow}>
+                    <Pressable
+                      style={styles.secretActionBtn}
+                      onPress={async () => {
+                        if (!patientAccessCode) return;
+                        await Clipboard.setStringAsync(patientAccessCode);
+                        showToast("Patient code copied.", "success");
+                      }}
+                    >
+                      <Copy size={14} color={theme.colors.brand.dark} />
+                      <AppText weight="semibold" style={styles.secretActionText}>
+                        Copy Code
+                      </AppText>
+                    </Pressable>
+
+                    <Pressable
+                      style={styles.secretActionBtn}
+                      onPress={async () => {
+                        if (!patientAccessCode) return;
+                        await Share.share({
+                          message: `${data.display_name} access code: ${patientAccessCode}`,
+                        });
+                      }}
+                    >
+                      <Send size={14} color={theme.colors.brand.dark} />
+                      <AppText weight="semibold" style={styles.secretActionText}>
+                        Share Code
+                      </AppText>
+                    </Pressable>
+                  </View>
                 </View>
-                <AppText selectable={true} style={styles.secretValue}>
-                  {showSecretCode ? patientAccessCode : "●●●●-●●●●-●●●●"}
-                </AppText>
+              ) : (
                 <AppText style={styles.helperText}>
-                  Share this code with family or clinicians for access to{" "}
-                  {data?.display_name ?? "Patient Profile"}
+                  Only patient owners can view and share the secret code.
                 </AppText>
-
-                <View style={styles.secretActionsRow}>
-                  <Pressable
-                    style={styles.secretActionBtn}
-                    onPress={async () => {
-                      if (!patientAccessCode) return;
-                      await Clipboard.setStringAsync(patientAccessCode);
-                      showToast("Patient code copied.", "success");
-                    }}
-                  >
-                    <Copy size={14} color={theme.colors.brand.dark} />
-                    <AppText weight="semibold" style={styles.secretActionText}>
-                      Copy Code
-                    </AppText>
-                  </Pressable>
-
-                  <Pressable
-                    style={styles.secretActionBtn}
-                    onPress={async () => {
-                      if (!patientAccessCode) return;
-                      await Share.share({
-                        message: `${data.display_name} access code: ${patientAccessCode}`,
-                      });
-                    }}
-                  >
-                    <Send size={14} color={theme.colors.brand.dark} />
-                    <AppText weight="semibold" style={styles.secretActionText}>
-                      Share Code
-                    </AppText>
-                  </Pressable>
-                </View>
-              </View>
+              )}
             </Card>
+
+            {isOwner ? (
+              <Card padding="md" borderActive={true} elevationActive={true}>
+                <AppText weight="semibold" style={styles.sectionTitle}>
+                  Access Requests
+                </AppText>
+                {!pendingRequests || pendingRequests.length === 0 ? (
+                  <AppText style={styles.helperText}>
+                    No pending read-only access requests.
+                  </AppText>
+                ) : (
+                  pendingRequests.map((request) => (
+                    <View key={request.id} style={styles.requestRow}>
+                      <AppText style={styles.requestUserText}>
+                        User: {request.requesterUserId.slice(0, 8)}...
+                      </AppText>
+                      <AppText style={styles.requestMetaText}>
+                        Requested: {new Date(request.createdAt).toLocaleString()}
+                      </AppText>
+                      <AppText style={styles.requestMetaText}>
+                        Requested Role:{" "}
+                        {request.requestedRole === "caregiver"
+                          ? "Full Access"
+                          : "Read-only"}
+                      </AppText>
+                      {request.note ? (
+                        <AppText style={styles.requestMetaText}>
+                          Note: {request.note}
+                        </AppText>
+                      ) : null}
+                      <View style={styles.requestActionsRow}>
+                        <Pressable
+                          style={styles.requestRejectBtn}
+                          disabled={resolveAccessRequestMutation.isPending}
+                          onPress={async () => {
+                            try {
+                              await resolveAccessRequestMutation.mutateAsync({
+                                request,
+                                approve: false,
+                              });
+                              showToast("Request rejected.", "info");
+                            } catch (e: any) {
+                              showToast(e?.message ?? "Could not reject request.", "error");
+                            }
+                          }}
+                        >
+                          <AppText style={styles.requestRejectBtnText}>Reject</AppText>
+                        </Pressable>
+                        <Pressable
+                          style={styles.requestApproveBtn}
+                          disabled={resolveAccessRequestMutation.isPending}
+                          onPress={async () => {
+                            try {
+                              await resolveAccessRequestMutation.mutateAsync({
+                                request,
+                                approve: true,
+                              });
+                              showToast("Read-only access approved.", "success");
+                            } catch (e: any) {
+                              showToast(e?.message ?? "Could not approve request.", "error");
+                            }
+                          }}
+                        >
+                          <AppText style={styles.requestApproveBtnText}>Approve</AppText>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </Card>
+            ) : null}
           </>
         )}
       </Section>
@@ -314,6 +403,57 @@ const styles = StyleSheet.create({
   secretActionText: {
     color: theme.colors.brand.dark,
     fontSize: theme.typography.fontSize.xs,
+  },
+  requestRow: {
+    marginTop: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.12)",
+    backgroundColor: "rgba(255,255,255,0.88)",
+    padding: 10,
+  },
+  requestUserText: {
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: "600",
+    color: theme.colors.text.primary,
+  },
+  requestMetaText: {
+    marginTop: 3,
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.secondary,
+  },
+  requestActionsRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    gap: 8,
+  },
+  requestRejectBtn: {
+    flex: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(209,67,67,0.22)",
+    backgroundColor: "rgba(209,67,67,0.10)",
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  requestApproveBtn: {
+    flex: 1,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(47,133,90,0.24)",
+    backgroundColor: "rgba(47,133,90,0.10)",
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  requestRejectBtnText: {
+    color: "#A13232",
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: "600",
+  },
+  requestApproveBtnText: {
+    color: "#1F6C45",
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: "600",
   },
   emptyWrap: {
     borderRadius: 12,

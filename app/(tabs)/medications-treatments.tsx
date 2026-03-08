@@ -1,5 +1,6 @@
 import Section from "@/components/layout/Section";
 import {
+  useActivePatientMembership,
   useClearMedicationHistoryException,
   useLogMedicationHistoryException,
   useMedicationHistory,
@@ -93,6 +94,7 @@ export default function MedicationsTreatments() {
   const { showToast } = useUIStore();
 
   const userId = useAuthStore((s) => s.session?.user.id);
+  const { data: activeMembership } = useActivePatientMembership(userId);
   const { data: primaryPatientId, refetch: refetchPrimaryPatient } =
     usePrimaryPatientId(userId);
   const { data: upcomingMedsData, refetch: refetchUpcomingMeds } =
@@ -114,6 +116,15 @@ export default function MedicationsTreatments() {
   const upcomingMeds: UpcomingMedication[] = upcomingMedsData ?? [];
   const medications = useMemo(() => medicationsData ?? [], [medicationsData]);
   const historyItems = useMemo(() => historyData ?? [], [historyData]);
+  const isReadOnly = activeMembership?.role === "read_only";
+
+  useEffect(() => {
+    if (!isReadOnly) return;
+    if (showAddMedication) {
+      setShowAddMedication(false);
+      showToast("Read-only access: unable to add medication.", "info");
+    }
+  }, [isReadOnly, showAddMedication, showToast]);
 
   useEffect(() => {
     if (!selectedMedication) return;
@@ -284,7 +295,13 @@ export default function MedicationsTreatments() {
 
             <Pressable
               style={styles.addButton}
-              onPress={() => setShowAddMedication(true)}
+              onPress={() => {
+                if (isReadOnly) {
+                  showToast("Read-only access: cannot add medications.", "info");
+                  return;
+                }
+                setShowAddMedication(true);
+              }}
             >
               <View style={styles.addIconWrap}>
                 <Plus size={16} color="#2B6CB0" />
@@ -332,7 +349,9 @@ export default function MedicationsTreatments() {
                   subtitle={`${formatSchedule(med.schedule_type, med.schedule_times, med.one_off_due_at)} • ${formatRoute(med.route)}${med.instructions ? ` • ${med.instructions}` : ""}`}
                   rightText={`${med.dose ?? "Dose not set"} • ${formatStock(med.stock_quantity, med.stock_unit)}`}
                   showChevron={true}
-                  onPress={() => setSelectedMedication(med)}
+                  onPress={() => {
+                    setSelectedMedication(med);
+                  }}
                 />
               ))
             )}
@@ -379,7 +398,7 @@ export default function MedicationsTreatments() {
             onChangeWindowHours={setMedsWindowHours}
           />
           <AddMedicationModal
-            visible={showAddMedication}
+            visible={showAddMedication && !isReadOnly}
             onClose={() => setShowAddMedication(false)}
             patientId={primaryPatientId ?? undefined}
             userId={userId}
@@ -389,16 +408,19 @@ export default function MedicationsTreatments() {
             onClose={() => setSelectedMedication(null)}
             medication={selectedMedication}
             patientId={primaryPatientId ?? undefined}
+            canEdit={!isReadOnly}
           />
           <MedicationHistoryModal
             visible={showHistoryModal}
             onClose={() => setShowHistoryModal(false)}
             items={historyItems.slice(0, 50)}
             isSaving={logHistoryException.isPending || clearHistoryException.isPending}
+            canEdit={!isReadOnly}
             onChangeStatus={async (
               item: MedicationHistoryItem,
               status: "taken" | "skipped" | "rejected",
             ) => {
+              if (isReadOnly) return;
               if (!primaryPatientId) return;
               try {
                 if (status === "taken") {

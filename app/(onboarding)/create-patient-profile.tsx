@@ -1,4 +1,5 @@
 import { supabase } from "@/services/supabase";
+import { useRequestReadOnlyAccess } from "@/src/api/access/hooks";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
 import MonthCalendarModal from "@/src/components/calendar/MonthCalendarModal";
@@ -10,7 +11,7 @@ import { useUIStore } from "@/state/ui.store";
 import { useRouter } from "expo-router";
 import { Calendar, CircleCheck, User } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 
 type SexOption = "female" | "male" | "other" | "prefer_not_to_say";
 
@@ -37,6 +38,10 @@ export default function CreatePatientProfile() {
   const [sex, setSex] = useState<SexOption | null>(null);
   const [saving, setSaving] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [connectSecretCode, setConnectSecretCode] = useState("");
+
+  const requestAccess = useRequestReadOnlyAccess(userId);
 
   const canContinue = useMemo(
     () => name.trim().length > 0 && !!userId && !saving,
@@ -57,7 +62,6 @@ export default function CreatePatientProfile() {
     }
 
     const dobValue = dobDate ? formatISODate(dobDate) : null;
-
     const sexValue = sex === "prefer_not_to_say" ? null : sex;
 
     try {
@@ -83,7 +87,6 @@ export default function CreatePatientProfile() {
         role: "owner",
       });
 
-      // If membership was auto-created by DB logic, treat duplicate key as success.
       if (memberError && memberError.code !== "23505") throw memberError;
 
       showToast("Patient profile created.", "success");
@@ -93,6 +96,33 @@ export default function CreatePatientProfile() {
     } finally {
       hideLoading();
       setSaving(false);
+    }
+  };
+
+  const connectToExistingPatientProfile = async () => {
+    if (!userId) {
+      showToast("Please sign in again to continue.", "error");
+      router.replace("/(auth)/signup");
+      return;
+    }
+
+    const code = connectSecretCode.trim().toUpperCase();
+    if (!code) {
+      showToast("Please enter a patient secret code.", "error");
+      return;
+    }
+
+    try {
+      showLoading("Sending access request...");
+      await requestAccess.mutateAsync({ code, requestedRole: "read_only" });
+      showToast("Access request sent. Awaiting owner approval.", "success");
+      setShowConnectModal(false);
+      setConnectSecretCode("");
+      router.replace("/(auth)/post-login");
+    } catch (e: any) {
+      showToast(e?.message ?? "Could not send access request.", "error");
+    } finally {
+      hideLoading();
     }
   };
 
@@ -181,7 +211,7 @@ export default function CreatePatientProfile() {
 
         <PillButton
           label="Connect to an existing patient profile"
-          onPress={() => showToast("Caregiver connect flow coming next.", "info")}
+          onPress={() => setShowConnectModal(true)}
           borderActive={true}
           elevationActive={false}
           textStyle={styles.secondaryCtaText}
@@ -223,6 +253,57 @@ export default function CreatePatientProfile() {
           setCalendarVisible(false);
         }}
       />
+
+      <Modal
+        transparent
+        visible={showConnectModal}
+        animationType="fade"
+        onRequestClose={() => setShowConnectModal(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setShowConnectModal(false)}
+        >
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <AppText weight="bold" style={styles.modalTitle}>
+              Connect to Existing Patient
+            </AppText>
+            <AppText style={styles.modalSubtitle}>
+              Enter the patient secret code shared by the profile owner.
+            </AppText>
+
+            <TextInput
+              value={connectSecretCode}
+              onChangeText={(value) => setConnectSecretCode(value.toUpperCase())}
+              autoCapitalize="characters"
+              placeholder="PT-XXXX-XXXX-XXXX"
+              placeholderTextColor="rgba(31,45,61,0.45)"
+              style={styles.modalInput}
+            />
+
+            <View style={styles.modalActionRow}>
+              <Pressable
+                style={styles.modalSecondaryBtn}
+                onPress={() => {
+                  setShowConnectModal(false);
+                  setConnectSecretCode("");
+                }}
+              >
+                <AppText weight="semibold">Cancel</AppText>
+              </Pressable>
+              <Pressable
+                style={styles.modalPrimaryBtn}
+                disabled={requestAccess.isPending}
+                onPress={connectToExistingPatientProfile}
+              >
+                <AppText weight="semibold" style={styles.modalPrimaryBtnText}>
+                  {requestAccess.isPending ? "Sending..." : "Send Request"}
+                </AppText>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }
@@ -405,5 +486,65 @@ const styles = StyleSheet.create({
   trustText: {
     color: "rgba(31,45,61,0.65)",
     fontSize: theme.typography.fontSize.sm,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.28)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 18,
+  },
+  modalCard: {
+    width: "100%",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.8)",
+    backgroundColor: "rgba(255,255,255,0.98)",
+    padding: 14,
+  },
+  modalTitle: {
+    fontSize: theme.typography.fontSize.lg,
+  },
+  modalSubtitle: {
+    marginTop: 2,
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
+  },
+  modalInput: {
+    marginTop: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.16)",
+    backgroundColor: "rgba(255,255,255,0.95)",
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  modalActionRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    gap: 8,
+  },
+  modalSecondaryBtn: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.16)",
+    backgroundColor: "rgba(255,255,255,0.95)",
+    paddingVertical: 9,
+    alignItems: "center",
+  },
+  modalPrimaryBtn: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.22)",
+    backgroundColor: "rgba(74,144,226,0.12)",
+    paddingVertical: 9,
+    alignItems: "center",
+  },
+  modalPrimaryBtnText: {
+    color: theme.colors.brand.dark,
   },
 });

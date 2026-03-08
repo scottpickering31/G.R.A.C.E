@@ -2,6 +2,7 @@ import Card from "@/components/layout/Card";
 import Section from "@/components/layout/Section";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import {
+  useActivePatientMembership,
   useMedications,
   usePrimaryPatientId,
 } from "@/src/api/medications/hooks";
@@ -119,6 +120,7 @@ export default function Stock() {
     useState<MedicationListItem | null>(null);
 
   const userId = useAuthStore((s) => s.session?.user.id);
+  const { data: activeMembership } = useActivePatientMembership(userId);
   const { data: primaryPatientId, refetch: refetchPrimaryPatient } =
     usePrimaryPatientId(userId);
   const {
@@ -128,6 +130,7 @@ export default function Stock() {
   } = useMedications(primaryPatientId ?? undefined);
 
   const medications = useMemo(() => medicationsData ?? [], [medicationsData]);
+  const isReadOnly = activeMembership?.role === "read_only";
 
   const summary = useMemo(() => {
     const critical = medications.filter(
@@ -485,6 +488,7 @@ export default function Stock() {
             onClose={() => setSelectedMedication(null)}
             medication={selectedMedication}
             patientId={primaryPatientId ?? undefined}
+            canEdit={!isReadOnly}
           />
         </Section>
       </Screen>
