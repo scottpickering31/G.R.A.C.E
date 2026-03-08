@@ -34,10 +34,16 @@ export default function TabsLayout() {
                 onPress={() => router.push("/(tabs)/(pages)/notifications")}
                 style={styles.iconButton}
               >
-                <Ionicons name="notifications-outline" size={22} color="#1F2937" />
+                <Ionicons
+                  name="notifications-outline"
+                  size={22}
+                  color="#1F2937"
+                />
                 {pendingCount > 0 ? (
                   <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{pendingCount > 9 ? "9+" : pendingCount}</Text>
+                    <Text style={styles.badgeText}>
+                      {pendingCount > 9 ? "9+" : pendingCount}
+                    </Text>
                   </View>
                 ) : null}
               </Pressable>
@@ -51,7 +57,10 @@ export default function TabsLayout() {
           ),
         headerTransparent: true,
         headerShadowVisible: false,
-        headerTitleStyle: { fontWeight: "700" },
+        headerTitleStyle: {
+          fontWeight: "700",
+          fontSize: theme.typography.fontSize.lg,
+        },
 
         tabBarStyle: {
           borderColor: "rgba(30, 58, 138, 0.2)",
@@ -77,6 +86,7 @@ export default function TabsLayout() {
           fontSize: theme.typography.fontSize.xs,
           fontWeight: "600",
           textAlign: "center",
+          transform: [{ scale: 0.8 }],
         },
         tabBarItemStyle: {
           flex: 1,
@@ -106,7 +116,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="medications-treatments"
         options={{
-          title: "Medications",
+          title: "Meds",
           headerTitle: "Medications & Treatments",
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
@@ -121,7 +131,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="appointments"
         options={{
-          title: "Appointments",
+          title: "Appts",
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? "calendar" : "calendar-outline"}

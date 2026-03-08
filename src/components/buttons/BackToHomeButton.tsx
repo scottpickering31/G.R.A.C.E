@@ -17,9 +17,9 @@ export default function BackToHomeButton() {
       style={{ paddingHorizontal: 15 }}
     >
       {isHome ? (
-        <House size={26} color="#1F2937" />
+        <House size={24} color="#1F2937" />
       ) : (
-        <ChevronLeft size={26} color="#1F2937" />
+        <ChevronLeft size={24} color="#1F2937" />
       )}
     </Pressable>
   );
