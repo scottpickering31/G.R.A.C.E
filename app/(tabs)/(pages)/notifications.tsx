@@ -5,7 +5,7 @@ import {
   useResolveAccessRequest,
 } from "@/src/api/access/hooks";
 import AppText from "@/src/components/AppText";
-import Loading from "@/src/components/Loading";
+import PageSkeleton from "@/src/components/loading/PageSkeleton";
 import Screen from "@/src/components/layout/Screen";
 import { useAuthStore } from "@/src/state/auth.store";
 import { useUIStore } from "@/state/ui.store";
@@ -23,7 +23,9 @@ export default function NotificationsPage() {
   } = useOwnerPendingAccessRequests(userId);
   const resolveAccessRequest = useResolveAccessRequest(undefined, userId);
 
-  if (isLoading && !pendingRequests) return <Loading />;
+  if (isLoading && !pendingRequests) {
+    return <PageSkeleton sectionCount={1} rowCount={4} />;
+  }
 
   return (
     <Screen

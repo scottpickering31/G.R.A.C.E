@@ -10,7 +10,7 @@ import {
   usePatientProfileDetails,
 } from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
-import Loading from "@/src/components/Loading";
+import PageSkeleton from "@/src/components/loading/PageSkeleton";
 import Screen from "@/src/components/layout/Screen";
 import { useAuthStore } from "@/src/state/auth.store";
 import { theme } from "@/src/theme";
@@ -26,8 +26,16 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react-native";
-import { useState } from "react";
-import { Alert, Pressable, Share, StyleSheet, View } from "react-native";
+import { useCallback, useState } from "react";
+import {
+  Alert,
+  Modal,
+  Pressable,
+  Share,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 
 function formatDob(dob: string | null) {
   if (!dob) return "Not set";
@@ -53,6 +61,8 @@ export default function PatientProfileDetailsPage() {
   const userId = useAuthStore((s) => s.session?.user.id);
   const { showToast } = useUIStore();
   const [showSecretCode, setShowSecretCode] = useState(false);
+  const [showDeleteOwnerModal, setShowDeleteOwnerModal] = useState(false);
+  const [deletePhrase, setDeletePhrase] = useState("");
   const params = useLocalSearchParams<{ patientId?: string | string[] }>();
   const patientId = Array.isArray(params.patientId)
     ? params.patientId[0]
@@ -73,15 +83,24 @@ export default function PatientProfileDetailsPage() {
     isOwner ? data?.id : undefined,
     userId,
   );
+  const expectedDeletePhrase = data
+    ? `DELETE ${data.display_name.toUpperCase()}`
+    : "";
+  const deletePhraseMatches =
+    deletePhrase.trim().toUpperCase() === expectedDeletePhrase;
 
-  useFocusEffect(() => {
-    return () => {
-      setShowSecretCode(false);
-    };
-  });
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setShowSecretCode(false);
+        setShowDeleteOwnerModal(false);
+        setDeletePhrase("");
+      };
+    }, []),
+  );
 
   if (isLoading) {
-    return <Loading />;
+    return <PageSkeleton sectionCount={3} rowCount={2} />;
   }
 
   return (
@@ -301,6 +320,11 @@ export default function PatientProfileDetailsPage() {
                 disabled={deletePatientProfileMutation.isPending || !data || !userId}
                 onPress={() => {
                   if (!data || !userId) return;
+                  if (isOwner) {
+                    setDeletePhrase("");
+                    setShowDeleteOwnerModal(true);
+                    return;
+                  }
                   const actionLabel = isOwner
                     ? "Delete Patient Profile"
                     : "Remove Linked Profile";
@@ -347,6 +371,93 @@ export default function PatientProfileDetailsPage() {
                 </AppText>
               </Pressable>
             </Card>
+
+            <Modal
+              visible={showDeleteOwnerModal}
+              transparent={true}
+              animationType="fade"
+              onRequestClose={() => {
+                if (deletePatientProfileMutation.isPending) return;
+                setShowDeleteOwnerModal(false);
+                setDeletePhrase("");
+              }}
+            >
+              <View style={styles.modalBackdrop}>
+                <View style={styles.deleteModalCard}>
+                  <AppText weight="semibold" style={styles.deleteModalTitle}>
+                    Delete Patient Profile
+                  </AppText>
+                  <AppText style={styles.deleteModalBody}>
+                    This action is permanent. Type{" "}
+                    <AppText weight="bold" style={styles.deleteModalCode}>
+                      {expectedDeletePhrase}
+                    </AppText>{" "}
+                    to continue.
+                  </AppText>
+                  <TextInput
+                    value={deletePhrase}
+                    onChangeText={setDeletePhrase}
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    placeholder={expectedDeletePhrase}
+                    placeholderTextColor={theme.colors.text.secondary}
+                    style={styles.deleteInput}
+                  />
+                  <View style={styles.deleteModalActions}>
+                    <Pressable
+                      style={styles.deleteModalCancelBtn}
+                      disabled={deletePatientProfileMutation.isPending}
+                      onPress={() => {
+                        setShowDeleteOwnerModal(false);
+                        setDeletePhrase("");
+                      }}
+                    >
+                      <AppText style={styles.deleteModalCancelText}>
+                        Cancel
+                      </AppText>
+                    </Pressable>
+                    <Pressable
+                      style={[
+                        styles.deleteModalConfirmBtn,
+                        deletePhraseMatches
+                          ? styles.deleteModalConfirmBtnEnabled
+                          : styles.deleteModalConfirmBtnDisabled,
+                      ]}
+                      disabled={
+                        deletePatientProfileMutation.isPending ||
+                        !deletePhraseMatches ||
+                        !data ||
+                        !userId
+                      }
+                      onPress={async () => {
+                        if (!data || !userId || !deletePhraseMatches) return;
+                        try {
+                          await deletePatientProfileMutation.mutateAsync({
+                            userId,
+                            patientId: data.id,
+                          });
+                          setShowDeleteOwnerModal(false);
+                          setDeletePhrase("");
+                          showToast("Patient profile deleted.", "success");
+                          router.replace("/(tabs)/(pages)/patient-profiles");
+                        } catch (e: any) {
+                          showToast(
+                            e?.message ?? "Could not delete this patient profile.",
+                            "error",
+                          );
+                        }
+                      }}
+                    >
+                      <AppText style={styles.deleteModalConfirmText}>
+                        {deletePatientProfileMutation.isPending
+                          ? "Processing..."
+                          : "Delete Patient"}
+                      </AppText>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
+            </Modal>
           </>
         )}
       </Section>
@@ -544,6 +655,88 @@ const styles = StyleSheet.create({
   },
   deleteProfileBtnText: {
     color: "#C53030",
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: "700",
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(12,18,28,0.45)",
+    paddingHorizontal: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteModalCard: {
+    width: "100%",
+    maxWidth: 420,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.14)",
+    backgroundColor: "rgba(255,255,255,0.98)",
+    padding: 14,
+  },
+  deleteModalTitle: {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.md,
+  },
+  deleteModalBody: {
+    marginTop: 8,
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  deleteModalCode: {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  deleteInput: {
+    marginTop: 12,
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.16)",
+    backgroundColor: "rgba(248,251,255,0.9)",
+    paddingHorizontal: 10,
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  deleteModalActions: {
+    marginTop: 12,
+    flexDirection: "row",
+    gap: 8,
+  },
+  deleteModalCancelBtn: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.16)",
+    backgroundColor: "rgba(245,247,251,0.95)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteModalCancelText: {
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: "600",
+  },
+  deleteModalConfirmBtn: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deleteModalConfirmBtnDisabled: {
+    borderWidth: 1,
+    borderColor: "rgba(135,145,158,0.26)",
+    backgroundColor: "rgba(180,190,204,0.2)",
+  },
+  deleteModalConfirmBtnEnabled: {
+    borderWidth: 1,
+    borderColor: "rgba(197,48,48,0.45)",
+    backgroundColor: "#C53030",
+  },
+  deleteModalConfirmText: {
+    color: "#FFFFFF",
     fontSize: theme.typography.fontSize.sm,
     fontWeight: "700",
   },

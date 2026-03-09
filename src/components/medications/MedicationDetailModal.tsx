@@ -174,6 +174,21 @@ function getStockStatus(med: MedicationListItem) {
   return { label: "Stock level healthy", tone: "good" as const };
 }
 
+function getStockThresholdProgress(med: MedicationListItem) {
+  const qty = med.stock_quantity;
+  const threshold = med.low_stock_threshold;
+
+  if (qty == null || threshold == null || threshold <= 0) return null;
+
+  const rawPercent = (qty / threshold) * 100;
+  const clampedPercent = Math.max(0, Math.min(100, rawPercent));
+  return {
+    labelPercent: Math.round(clampedPercent),
+    fillPercent: clampedPercent,
+    isDanger: qty < threshold,
+  };
+}
+
 export default function MedicationDetailModal({
   visible,
   onClose,
@@ -203,11 +218,9 @@ export default function MedicationDetailModal({
   const [oneOffTime, setOneOffTime] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [stockQty, setStockQty] = useState("");
-  const [stockCapacity, setStockCapacity] = useState("");
   const [stockUnit, setStockUnit] = useState("tablets");
   const [lowThreshold, setLowThreshold] = useState("");
   const [refillAmount, setRefillAmount] = useState("");
-  const [useFullCapacity, setUseFullCapacity] = useState(false);
 
   useEffect(() => {
     if (!medication || !visible) return;
@@ -228,9 +241,6 @@ export default function MedicationDetailModal({
     setStockQty(
       medication.stock_quantity == null ? "" : String(medication.stock_quantity),
     );
-    setStockCapacity(
-      medication.stock_capacity == null ? "" : String(medication.stock_capacity),
-    );
     setStockUnit(medication.stock_unit ?? "tablets");
     setLowThreshold(
       medication.low_stock_threshold == null
@@ -243,7 +253,6 @@ export default function MedicationDetailModal({
     setShowDoseUnits(false);
     setShowStockUnits(false);
     setRefillAmount("");
-    setUseFullCapacity(false);
   }, [medication, visible]);
 
   useEffect(() => {
@@ -252,36 +261,20 @@ export default function MedicationDetailModal({
     setConfirmDelete(false);
   }, [canEdit]);
 
-  const stockPercent = useMemo(() => {
-    if (!medication) return null;
-    if (medication.stock_quantity == null || medication.stock_capacity == null) return null;
-    if (medication.stock_capacity <= 0) return null;
-    return Math.max(0, Math.min(100, (medication.stock_quantity / medication.stock_capacity) * 100));
-  }, [medication]);
-
   if (!medication) return null;
 
   const stockState = getStockStatus(medication);
+  const stockProgress = getStockThresholdProgress(medication);
   const runoutEstimate = toRunoutEstimate(medication);
   const refillBaseQty = medication.stock_quantity ?? 0;
-  const refillCapacityQty =
-    medication.stock_capacity != null && medication.stock_capacity > 0
-      ? medication.stock_capacity
-      : null;
-  const canSetFullCapacity = refillCapacityQty != null;
   const refillParsedAmount = Number(refillAmount);
   const refillIsValidAmount =
     refillAmount.trim().length > 0 &&
     Number.isFinite(refillParsedAmount) &&
     refillParsedAmount > 0;
   const refillTargetQty =
-    useFullCapacity && canSetFullCapacity
-      ? refillCapacityQty
-      : refillBaseQty + (refillIsValidAmount ? refillParsedAmount : 0);
-  const canSubmitRefill =
-    useFullCapacity && canSetFullCapacity
-      ? refillTargetQty > refillBaseQty
-      : refillIsValidAmount;
+    refillBaseQty + (refillIsValidAmount ? refillParsedAmount : 0);
+  const canSubmitRefill = refillIsValidAmount;
 
   const onSave = async () => {
     const trimmedName = name.trim();
@@ -295,15 +288,10 @@ export default function MedicationDetailModal({
       : "";
 
     const stockQtyVal = toOptionalNumber(stockQty);
-    const stockCapacityVal = toOptionalNumber(stockCapacity);
     const lowThresholdVal = toOptionalNumber(lowThreshold);
 
     if (stockQty.trim() && stockQtyVal === undefined) {
       showToast("Current stock must be a positive number.", "error");
-      return;
-    }
-    if (stockCapacity.trim() && stockCapacityVal === undefined) {
-      showToast("Stock capacity must be a positive number.", "error");
       return;
     }
     if (lowThreshold.trim() && lowThresholdVal === undefined) {
@@ -339,7 +327,6 @@ export default function MedicationDetailModal({
         oneOffDueAt,
         expiresAt: expiresAt.trim() || undefined,
         stockQuantity: stockQtyVal,
-        stockCapacity: stockCapacityVal,
         stockUnit: stockUnit.trim(),
         lowStockThreshold: lowThresholdVal,
       });
@@ -364,12 +351,7 @@ export default function MedicationDetailModal({
   const onQuickRefill = async () => {
     if (!canEdit) return;
     if (!canSubmitRefill) {
-      showToast(
-        useFullCapacity
-          ? "Medication is already at full capacity."
-          : "Enter a valid refill amount greater than 0.",
-        "error",
-      );
+      showToast("Enter a valid refill amount greater than 0.", "error");
       return;
     }
 
@@ -385,13 +367,11 @@ export default function MedicationDetailModal({
         oneOffDueAt: medication.one_off_due_at ?? undefined,
         expiresAt: medication.expires_at ?? undefined,
         stockQuantity: refillTargetQty,
-        stockCapacity: medication.stock_capacity ?? undefined,
         stockUnit: medication.stock_unit ?? undefined,
         lowStockThreshold: medication.low_stock_threshold ?? undefined,
       });
       showToast("Stock refilled.", "success");
       setRefillAmount("");
-      setUseFullCapacity(false);
     } catch (e: any) {
       showToast(e?.message ?? "Could not refill stock.", "error");
     }
@@ -433,14 +413,6 @@ export default function MedicationDetailModal({
                     }
                   />
                   <Row
-                    label="Stock capacity"
-                    value={
-                      medication.stock_capacity == null
-                        ? "Not set"
-                        : `${medication.stock_capacity}${medication.stock_unit ? ` ${medication.stock_unit}` : ""}`
-                    }
-                  />
-                  <Row
                     label="Low-stock threshold"
                     value={
                       medication.low_stock_threshold == null
@@ -448,16 +420,27 @@ export default function MedicationDetailModal({
                         : `${medication.low_stock_threshold}${medication.stock_unit ? ` ${medication.stock_unit}` : ""}`
                     }
                   />
-
-                  {stockPercent != null ? (
+                  {stockProgress ? (
                     <View style={styles.progressWrap}>
                       <View style={styles.progressTrack}>
-                        <View style={[styles.progressFill, { width: `${stockPercent}%` }]} />
+                        <View
+                          style={[
+                            styles.progressFill,
+                            stockProgress.isDanger
+                              ? styles.progressFillDanger
+                              : styles.progressFillSafe,
+                            { width: `${stockProgress.fillPercent}%` },
+                          ]}
+                        />
                       </View>
-                      <AppText style={styles.progressLabel}>{Math.round(stockPercent)}% stock full</AppText>
+                      <AppText style={styles.progressLabel}>
+                        {stockProgress.labelPercent}% of low-stock threshold
+                      </AppText>
                     </View>
                   ) : (
-                    <AppText style={styles.helperText}>Add stock quantity and capacity to see progress.</AppText>
+                    <AppText style={styles.helperText}>
+                      Add current stock and low-stock threshold to see progress.
+                    </AppText>
                   )}
 
                   <AppText
@@ -484,32 +467,8 @@ export default function MedicationDetailModal({
                         onChangeText={(t) => setRefillAmount(sanitizeDecimalInput(t))}
                         keyboardType="decimal-pad"
                         placeholder="Add amount (e.g. 100)"
-                        style={[
-                          styles.input,
-                          useFullCapacity && styles.quickRefillInputDisabled,
-                        ]}
-                        editable={!useFullCapacity}
+                        style={styles.input}
                       />
-                      {canSetFullCapacity ? (
-                        <Pressable
-                          style={[
-                            styles.quickRefillCapacityToggle,
-                            useFullCapacity && styles.quickRefillCapacityToggleActive,
-                          ]}
-                          onPress={() => setUseFullCapacity((prev) => !prev)}
-                        >
-                          <AppText
-                            style={[
-                              styles.quickRefillCapacityText,
-                              useFullCapacity && styles.quickRefillCapacityTextActive,
-                            ]}
-                          >
-                            Set to full capacity (
-                            {`${refillCapacityQty}${medication.stock_unit ? ` ${medication.stock_unit}` : ""}`}
-                            )
-                          </AppText>
-                        </Pressable>
-                      ) : null}
                       <AppText style={styles.helperText}>
                         New total:{" "}
                         {canSubmitRefill
@@ -647,9 +606,9 @@ export default function MedicationDetailModal({
                 <Field label="Current stock">
                   <View style={styles.inlineRow}>
                     <TextInput
-                      value={stockQty}
-                      onChangeText={(t) => setStockQty(sanitizeDecimalInput(t))}
-                      keyboardType="decimal-pad"
+                        value={stockQty}
+                        onChangeText={(t) => setStockQty(sanitizeDecimalInput(t))}
+                        keyboardType="decimal-pad"
                       placeholder="Qty"
                       style={[styles.input, { flex: 1 }]}
                     />
@@ -670,16 +629,6 @@ export default function MedicationDetailModal({
                       }}
                     />
                   ) : null}
-                </Field>
-
-                <Field label="Stock capacity">
-                  <TextInput
-                    value={stockCapacity}
-                    onChangeText={(t) => setStockCapacity(sanitizeDecimalInput(t))}
-                    keyboardType="decimal-pad"
-                    placeholder="e.g. 600"
-                    style={styles.input}
-                  />
                 </Field>
 
                 <Field label="Low-stock threshold">
@@ -896,6 +845,12 @@ const styles = StyleSheet.create({
   progressFill: {
     height: "100%",
     backgroundColor: "#4A90E2",
+  },
+  progressFillDanger: {
+    backgroundColor: "#C53030",
+  },
+  progressFillSafe: {
+    backgroundColor: "#2F855A",
   },
   progressLabel: {
     fontSize: theme.typography.fontSize.xs,

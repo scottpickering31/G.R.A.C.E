@@ -223,7 +223,6 @@ export type Database = {
           route: Database["public"]["Enums"]["medication_route"]
           schedule_time: string | null
           schedule_type: Database["public"]["Enums"]["medication_schedule_type"]
-          stock_capacity: number | null
           stock_quantity: number | null
           stock_unit: string | null
           updated_at: string
@@ -243,7 +242,6 @@ export type Database = {
           route?: Database["public"]["Enums"]["medication_route"]
           schedule_time?: string | null
           schedule_type?: Database["public"]["Enums"]["medication_schedule_type"]
-          stock_capacity?: number | null
           stock_quantity?: number | null
           stock_unit?: string | null
           updated_at?: string
@@ -263,7 +261,6 @@ export type Database = {
           route?: Database["public"]["Enums"]["medication_route"]
           schedule_time?: string | null
           schedule_type?: Database["public"]["Enums"]["medication_schedule_type"]
-          stock_capacity?: number | null
           stock_quantity?: number | null
           stock_unit?: string | null
           updated_at?: string

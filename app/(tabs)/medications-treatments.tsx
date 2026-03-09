@@ -310,7 +310,8 @@ export default function MedicationsTreatments() {
               ) : null}
               <AppText style={styles.featuredDueText}>{nextDueLabel}</AppText>
               <AppText style={styles.featuredHintText}>
-                Click to see all upcoming medications within the {medsWindowLabel.toLowerCase()}.
+                Click to see all upcoming medications within the{" "}
+                {medsWindowLabel.toLowerCase()}.
               </AppText>
             </Pressable>
 
@@ -414,6 +415,7 @@ export default function MedicationsTreatments() {
                           Dose: {med.dose ?? "Not set"}
                         </AppText>
                       </View>
+                      -
                       <View style={styles.activeMedicationMetaPill}>
                         <AppText style={styles.activeMedicationMetaText}>
                           Stock Remaining:{" "}
@@ -593,8 +595,10 @@ const styles = StyleSheet.create({
   sectionTitleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "flex-start",
+    flexWrap: "wrap",
     marginBottom: 8,
+    gap: 8,
   },
   sectionTitle: {
     fontWeight: "700",
@@ -670,6 +674,7 @@ const styles = StyleSheet.create({
   listTitle: {
     marginBottom: 2,
     fontSize: theme.typography.fontSize.sm,
+    flexShrink: 1,
   },
   safeChip: {
     borderRadius: 999,
@@ -681,6 +686,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    alignSelf: "flex-start",
   },
   safeChipText: {
     color: "#1F6C45",

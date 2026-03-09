@@ -51,7 +51,6 @@ function format24HourWithMeridiem(d: Date) {
 function getHomeStockLevel(med: {
   stock_quantity: number | null;
   low_stock_threshold: number | null;
-  stock_capacity: number | null;
 }) {
   const qty = med.stock_quantity;
   const threshold = med.low_stock_threshold;
@@ -61,10 +60,6 @@ function getHomeStockLevel(med: {
   if (threshold != null) {
     if (qty <= threshold) return "critical" as const;
     if (qty <= threshold * 1.5) return "watch" as const;
-  }
-  if (med.stock_capacity != null && med.stock_capacity > 0) {
-    const fillRatio = qty / med.stock_capacity;
-    if (fillRatio <= 0.25) return "watch" as const;
   }
   return "healthy" as const;
 }

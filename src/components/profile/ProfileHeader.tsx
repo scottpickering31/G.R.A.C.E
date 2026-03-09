@@ -55,10 +55,7 @@ export default function ProfileHeader({
             />
           </View>
         </Pressable>
-        <ProfileSwitcher
-          patientName={patientName}
-          dob={primaryPatient?.dob ?? null}
-        />
+        <ProfileSwitcher />
         {children}
       </View>
     </View>

@@ -10,7 +10,7 @@ import {
 import { MedicationListItem } from "@/src/api/medications/service";
 import AppText from "@/src/components/AppText";
 import Screen from "@/src/components/layout/Screen";
-import Loading from "@/src/components/Loading";
+import PageSkeleton from "@/src/components/loading/PageSkeleton";
 import AddMedicationModal from "@/src/components/medications/AddMedicationModal";
 import MedicationDetailModal from "@/src/components/medications/MedicationDetailModal";
 import SwipeableTabScreen from "@/src/components/navigation/SwipeableTabScreen";
@@ -48,11 +48,6 @@ function getStockLevel(med: MedicationListItem): StockLevel {
   if (threshold != null) {
     if (qty <= threshold) return "critical";
     if (qty <= threshold * 1.5) return "watch";
-  }
-
-  if (med.stock_capacity != null && med.stock_capacity > 0) {
-    const fillRatio = qty / med.stock_capacity;
-    if (fillRatio <= 0.25) return "watch";
   }
 
   return "healthy";
@@ -121,6 +116,21 @@ function estimateRunout(med: MedicationListItem) {
   return `Estimated run-out: ${runoutDate.toLocaleDateString()} (${Math.max(0, Math.floor(daysRemaining))} days left)`;
 }
 
+function getThresholdProgress(med: MedicationListItem) {
+  const qty = med.stock_quantity;
+  const threshold = med.low_stock_threshold;
+
+  if (qty == null || threshold == null || threshold <= 0) return null;
+
+  const rawPercent = (qty / threshold) * 100;
+  const clampedPercent = Math.max(0, Math.min(100, rawPercent));
+  return {
+    labelPercent: Math.round(clampedPercent),
+    fillPercent: clampedPercent,
+    isDanger: qty < threshold,
+  };
+}
+
 export default function Stock() {
   const [filter, setFilter] = useState<StockFilter>("all");
   const [showOnlyExpiring, setShowOnlyExpiring] = useState(false);
@@ -130,7 +140,6 @@ export default function Stock() {
   const [refillMedication, setRefillMedication] =
     useState<MedicationListItem | null>(null);
   const [refillAmount, setRefillAmount] = useState("");
-  const [useFullCapacity, setUseFullCapacity] = useState(false);
 
   const userId = useAuthStore((s) => s.session?.user.id);
   const showToast = useUIStore((s) => s.showToast);
@@ -198,27 +207,18 @@ export default function Stock() {
   );
 
   if (isLoading && !medicationsData) {
-    return <Loading />;
+    return <PageSkeleton sectionCount={3} rowCount={3} />;
   }
 
   const refillBaseQty = refillMedication?.stock_quantity ?? 0;
-  const refillCapacityQty =
-    refillMedication?.stock_capacity != null && refillMedication.stock_capacity > 0
-      ? refillMedication.stock_capacity
-      : null;
-  const canSetFullCapacity = refillCapacityQty != null;
   const refillParsedAmount = Number(refillAmount);
   const refillIsValidAmount =
     refillAmount.trim().length > 0 &&
     Number.isFinite(refillParsedAmount) &&
     refillParsedAmount > 0;
-  const refillNextQty = refillBaseQty + (refillIsValidAmount ? refillParsedAmount : 0);
   const refillTargetQty =
-    useFullCapacity && canSetFullCapacity ? refillCapacityQty : refillNextQty;
-  const canSubmitRefill =
-    useFullCapacity && canSetFullCapacity
-      ? refillTargetQty > refillBaseQty
-      : refillIsValidAmount;
+    refillBaseQty + (refillIsValidAmount ? refillParsedAmount : 0);
+  const canSubmitRefill = refillIsValidAmount;
 
   const submitRefill = async () => {
     if (!refillMedication) return;
@@ -227,12 +227,7 @@ export default function Stock() {
       return;
     }
     if (!canSubmitRefill) {
-      showToast(
-        useFullCapacity
-          ? "Medication is already at full capacity."
-          : "Enter a valid refill amount greater than 0.",
-        "error",
-      );
+      showToast("Enter a valid refill amount greater than 0.", "error");
       return;
     }
 
@@ -248,14 +243,12 @@ export default function Stock() {
         oneOffDueAt: refillMedication.one_off_due_at ?? undefined,
         expiresAt: refillMedication.expires_at ?? undefined,
         stockQuantity: refillTargetQty,
-        stockCapacity: refillMedication.stock_capacity ?? undefined,
         stockUnit: refillMedication.stock_unit ?? undefined,
         lowStockThreshold: refillMedication.low_stock_threshold ?? undefined,
       });
       showToast("Stock refilled.", "success");
       setRefillMedication(null);
       setRefillAmount("");
-      setUseFullCapacity(false);
     } catch (e: any) {
       showToast(e?.message ?? "Could not refill stock.", "error");
     }
@@ -445,16 +438,7 @@ export default function Stock() {
             ) : (
               filteredItems.map((item) => {
                 const level = getStockLevel(item);
-                const capacity =
-                  item.stock_capacity ?? item.stock_quantity ?? 0;
-                const quantity = item.stock_quantity ?? 0;
-                const percent =
-                  capacity > 0
-                    ? Math.max(
-                        0,
-                        Math.min(100, Math.round((quantity / capacity) * 100)),
-                      )
-                    : 0;
+                const thresholdProgress = getThresholdProgress(item);
 
                 return (
                   <Pressable
@@ -480,17 +464,27 @@ export default function Stock() {
                     </View>
 
                     <AppText style={styles.rowMeta}>
-                      Current:{" "}
-                      {formatQuantity(item.stock_quantity, item.stock_unit)} •
-                      Capacity:{" "}
-                      {formatQuantity(item.stock_capacity, item.stock_unit)}
+                      Current: {formatQuantity(item.stock_quantity, item.stock_unit)}
                     </AppText>
 
                     <View style={styles.progressTrack}>
                       <View
-                        style={[styles.progressFill, { width: `${percent}%` }]}
+                        style={[
+                          styles.progressFill,
+                          thresholdProgress?.isDanger
+                            ? styles.progressFillDanger
+                            : styles.progressFillSafe,
+                          {
+                            width: `${thresholdProgress?.fillPercent ?? 0}%`,
+                          },
+                        ]}
                       />
                     </View>
+                    <AppText style={styles.progressText}>
+                      {thresholdProgress
+                        ? `${thresholdProgress.labelPercent}% of low-stock threshold`
+                        : "Add a low-stock threshold to track progress."}
+                    </AppText>
 
                     <View style={styles.rowBottom}>
                       <AppText style={styles.rowMeta}>
@@ -572,7 +566,6 @@ export default function Stock() {
             onRequestClose={() => {
               setRefillMedication(null);
               setRefillAmount("");
-              setUseFullCapacity(false);
             }}
           >
             <Pressable
@@ -580,7 +573,6 @@ export default function Stock() {
               onPress={() => {
                 setRefillMedication(null);
                 setRefillAmount("");
-                setUseFullCapacity(false);
               }}
             >
               <Pressable style={styles.refillModalCard} onPress={() => {}}>
@@ -604,35 +596,8 @@ export default function Stock() {
                   keyboardType="decimal-pad"
                   placeholder="Add amount (e.g. 100)"
                   placeholderTextColor="rgba(31,45,61,0.42)"
-                  style={[
-                    styles.refillInput,
-                    useFullCapacity && styles.refillInputDisabled,
-                  ]}
-                  editable={!useFullCapacity}
+                  style={styles.refillInput}
                 />
-                {canSetFullCapacity ? (
-                  <Pressable
-                    style={[
-                      styles.refillCapacityToggle,
-                      useFullCapacity && styles.refillCapacityToggleActive,
-                    ]}
-                    onPress={() => setUseFullCapacity((prev) => !prev)}
-                  >
-                    <AppText
-                      style={[
-                        styles.refillCapacityToggleText,
-                        useFullCapacity && styles.refillCapacityToggleTextActive,
-                      ]}
-                    >
-                      Set to full capacity (
-                      {formatQuantity(
-                        refillCapacityQty,
-                        refillMedication?.stock_unit ?? null,
-                      )}
-                      )
-                    </AppText>
-                  </Pressable>
-                ) : null}
 
                 <AppText style={styles.refillMeta}>
                   New total:{" "}
@@ -647,7 +612,6 @@ export default function Stock() {
                     onPress={() => {
                       setRefillMedication(null);
                       setRefillAmount("");
-                      setUseFullCapacity(false);
                     }}
                   >
                     <AppText>Cancel</AppText>
@@ -890,6 +854,17 @@ const styles = StyleSheet.create({
   progressFill: {
     height: "100%",
     backgroundColor: theme.colors.brand.primary,
+  },
+  progressFillDanger: {
+    backgroundColor: "#C53030",
+  },
+  progressFillSafe: {
+    backgroundColor: "#2F855A",
+  },
+  progressText: {
+    marginTop: 4,
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.secondary,
   },
   rowBottom: {
     marginTop: 6,

@@ -15,7 +15,6 @@ export type MedicationListItem = {
   one_off_due_at: string | null;
   schedule_times: string[];
   stock_quantity: number | null;
-  stock_capacity: number | null;
   stock_unit: string | null;
   low_stock_threshold: number | null;
 };
@@ -66,7 +65,6 @@ export type CreateMedicationInput = {
   oneOffDueAt?: string;
   expiresAt?: string;
   stockQuantity?: number;
-  stockCapacity?: number;
   stockUnit?: string;
   lowStockThreshold?: number;
 };
@@ -82,7 +80,6 @@ export type UpdateMedicationInput = {
   oneOffDueAt?: string;
   expiresAt?: string;
   stockQuantity?: number;
-  stockCapacity?: number;
   stockUnit?: string;
   lowStockThreshold?: number;
 };
@@ -455,7 +452,7 @@ export async function getMedications(
   const query = supabase
     .from("medications")
     .select(
-      "id,name,dose,route,instructions,active,expires_at,schedule_type,one_off_due_at,stock_quantity,stock_capacity,stock_unit,low_stock_threshold,medication_schedule_times(time_of_day)",
+      "id,name,dose,route,instructions,active,expires_at,schedule_type,one_off_due_at,stock_quantity,stock_unit,low_stock_threshold,medication_schedule_times(time_of_day)",
     )
     .eq("patient_id", patientId)
     .eq("active", true)
@@ -609,7 +606,6 @@ export async function createMedication({
   oneOffDueAt,
   expiresAt,
   stockQuantity,
-  stockCapacity,
   stockUnit,
   lowStockThreshold,
 }: CreateMedicationInput): Promise<string> {
@@ -644,7 +640,6 @@ export async function createMedication({
       schedule_type: scheduleType,
       one_off_due_at: cleanedOneOffDueAt,
       stock_quantity: stockQuantity ?? null,
-      stock_capacity: stockCapacity ?? stockQuantity ?? null,
       stock_unit: cleanedStockUnit,
       low_stock_threshold: lowStockThreshold ?? null,
     })
@@ -683,7 +678,6 @@ export async function updateMedication({
   oneOffDueAt,
   expiresAt,
   stockQuantity,
-  stockCapacity,
   stockUnit,
   lowStockThreshold,
 }: UpdateMedicationInput): Promise<void> {
@@ -714,7 +708,6 @@ export async function updateMedication({
       schedule_type: scheduleType,
       one_off_due_at: cleanedOneOffDueAt,
       stock_quantity: stockQuantity ?? null,
-      stock_capacity: stockCapacity ?? null,
       stock_unit: cleanedStockUnit,
       low_stock_threshold: lowStockThreshold ?? null,
       updated_at: new Date().toISOString(),

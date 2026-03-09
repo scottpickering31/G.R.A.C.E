@@ -7,9 +7,9 @@ import {
 } from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
 import MonthCalendarModal from "@/src/components/calendar/MonthCalendarModal";
-import Loading from "@/src/components/Loading";
 import Card from "@/src/components/layout/Card";
 import Screen from "@/src/components/layout/Screen";
+import PageSkeleton from "@/src/components/loading/PageSkeleton";
 import { useAuthStore } from "@/src/state/auth.store";
 import { useUIStore } from "@/state/ui.store";
 import { theme } from "@/src/theme";
@@ -62,7 +62,7 @@ export default function PatientProfiles() {
   const canAddPatient = patientCount < 2;
 
   if (isLoading && !accessiblePatients) {
-    return <Loading />;
+    return <PageSkeleton sectionCount={1} rowCount={3} />;
   }
 
   return (
