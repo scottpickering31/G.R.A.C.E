@@ -1,69 +1,16 @@
 import Card from "@/components/layout/Card";
 import Section from "@/components/layout/Section";
 import Screen from "@/src/components/layout/Screen";
-import { theme } from "@/src/theme";
-import React, { useEffect, useRef } from "react";
-import { Animated, Easing, StyleSheet, View } from "react-native";
+import React from "react";
+import { StyleSheet, View } from "react-native";
+import SkeletonBlock from "./SkeletonBlock";
 
 type Props = {
-  screenBackground?: any;
+  screenBackground?: number;
   showHeader?: boolean;
   sectionCount?: number;
   rowCount?: number;
 };
-
-function SkeletonBlock({
-  width,
-  height,
-  radius = 10,
-}: {
-  width: number | `${number}%`;
-  height: number;
-  radius?: number;
-}) {
-  const shimmer = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const animation = Animated.loop(
-      Animated.timing(shimmer, {
-        toValue: 1,
-        duration: 1200,
-        easing: Easing.inOut(Easing.ease),
-        useNativeDriver: true,
-      }),
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [shimmer]);
-
-  const translateX = shimmer.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-140, 140],
-  });
-
-  return (
-    <View
-      style={[
-        styles.blockBase,
-        {
-          width,
-          height,
-          borderRadius: radius,
-        },
-      ]}
-    >
-      <Animated.View
-        pointerEvents="none"
-        style={[
-          styles.shimmer,
-          {
-            transform: [{ translateX }],
-          },
-        ]}
-      />
-    </View>
-  );
-}
 
 export default function PageSkeleton({
   screenBackground = require("@/assets/images/clouds.png"),
@@ -164,16 +111,5 @@ const styles = StyleSheet.create({
     borderColor: "rgba(31,45,61,0.08)",
     backgroundColor: "rgba(255,255,255,0.82)",
     padding: 12,
-  },
-  blockBase: {
-    overflow: "hidden",
-    backgroundColor: "rgba(74,144,226,0.10)",
-  },
-  shimmer: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: 90,
-    backgroundColor: "rgba(255,255,255,0.45)",
   },
 });

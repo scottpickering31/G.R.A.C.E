@@ -1,6 +1,6 @@
 import BackToHomeButton from "@/components/buttons/BackToHomeButton";
 import { useOwnerPendingAccessRequests } from "@/src/api/access/hooks";
-import Loading from "@/src/components/Loading";
+import PageSkeleton from "@/src/components/loading/PageSkeleton";
 import { theme } from "@/src/theme";
 import { useAuthStore } from "@/state/auth.store";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,7 +18,9 @@ export default function TabsLayout() {
   const { data: ownerPendingRequests } = useOwnerPendingAccessRequests(userId);
   const pendingCount = ownerPendingRequests?.length ?? 0;
 
-  if (!hydrated) return <Loading />;
+  if (!hydrated) {
+    return <PageSkeleton sectionCount={2} rowCount={3} />;
+  }
   if (!session) return <Redirect href="/(auth)/post-login" />;
 
   return (

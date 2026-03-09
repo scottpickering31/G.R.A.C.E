@@ -1,10 +1,10 @@
-import Loading from "@/components/Loading";
 import {
   useHasPatientAccess,
   useIsOnboardingCompleted,
 } from "@/src/api/onboarding/hooks";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
+import PageSkeleton from "@/src/components/loading/PageSkeleton";
 import { theme } from "@/src/theme";
 import { useAuthStore } from "@/src/state/auth.store";
 import { useRouter } from "expo-router";
@@ -65,7 +65,16 @@ export default function PostLoginGate() {
     router,
   ]);
 
-  if (!hydrated || onboardingLoading || patientLoading) return <Loading />;
+  if (!hydrated || onboardingLoading || patientLoading) {
+    return (
+      <PageSkeleton
+        screenBackground={require("@/assets/images/welcome-dreamscape.png")}
+        showHeader={false}
+        sectionCount={1}
+        rowCount={3}
+      />
+    );
+  }
 
   if (onboardingError || patientError) {
     const message = onboardingErrorObj?.message ?? patientErrorObj?.message;
@@ -101,5 +110,12 @@ export default function PostLoginGate() {
     );
   }
 
-  return <Loading />;
+  return (
+    <PageSkeleton
+      screenBackground={require("@/assets/images/welcome-dreamscape.png")}
+      showHeader={false}
+      sectionCount={1}
+      rowCount={2}
+    />
+  );
 }

@@ -1,6 +1,6 @@
-import Loading from "@/src/components/Loading";
 import { supabase } from "@/services/supabase";
 import AppText from "@/src/components/AppText";
+import PageSkeleton from "@/src/components/loading/PageSkeleton";
 import { theme } from "@/src/theme";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
@@ -74,7 +74,16 @@ export default function AuthCallback() {
     };
   }, [router]);
 
-  if (!error) return <Loading />;
+  if (!error) {
+    return (
+      <PageSkeleton
+        screenBackground={require("@/assets/images/welcome-dreamscape.png")}
+        showHeader={false}
+        sectionCount={1}
+        rowCount={2}
+      />
+    );
+  }
 
   return (
     <View style={{ flex: 1, justifyContent: "center", padding: 20, gap: 12 }}>

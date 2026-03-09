@@ -113,7 +113,9 @@ function MoreRow({
       onPress={onPress}
       disabled={comingSoon}
     >
-      <View style={[styles.rowIconWrap, comingSoon && styles.rowIconWrapDisabled]}>
+      <View
+        style={[styles.rowIconWrap, comingSoon && styles.rowIconWrapDisabled]}
+      >
         <Icon
           size={25}
           color={comingSoon ? theme.colors.text.muted : theme.colors.brand.dark}
@@ -125,9 +127,6 @@ function MoreRow({
           style={[styles.rowTitle, comingSoon && styles.rowTitleDisabled]}
         >
           {title}
-        </AppText>
-        <AppText style={[styles.rowSubtitle, comingSoon && styles.rowSubtitleDisabled]}>
-          {comingSoon ? `${subtitle} • Coming Soon` : subtitle}
         </AppText>
       </View>
       {comingSoon ? (

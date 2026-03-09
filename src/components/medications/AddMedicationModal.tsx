@@ -4,6 +4,7 @@ import {
 } from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
 import MonthCalendarModal from "@/src/components/calendar/MonthCalendarModal";
+import SkeletonBlock from "@/src/components/loading/SkeletonBlock";
 import { theme } from "@/src/theme";
 import { useUIStore } from "@/state/ui.store";
 import { Calendar, Info, Search } from "lucide-react-native";
@@ -464,11 +465,14 @@ export default function AddMedicationModal({
             {(searching || suggestions.length > 0) && (
               <View style={styles.suggestionsCard}>
                 {searching ? (
-                  <View style={styles.stateRow}>
-                    <ActivityIndicator size="small" color="#4A90E2" />
-                    <AppText style={styles.stateText}>
-                      Searching RxNorm...
-                    </AppText>
+                  <View style={styles.searchSkeletonWrap}>
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <View key={`search-skeleton-${index}`} style={styles.searchSkeletonRow}>
+                        <SkeletonBlock width="68%" height={14} />
+                        <View style={{ height: 6 }} />
+                        <SkeletonBlock width="44%" height={12} />
+                      </View>
+                    ))}
                   </View>
                 ) : (
                   <ScrollView
@@ -1338,16 +1342,17 @@ const styles = StyleSheet.create({
     color: theme.colors.text.primary,
     fontSize: theme.typography.fontSize.sm,
   },
-  stateRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  searchSkeletonWrap: {
+    paddingVertical: 8,
     gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 14,
   },
-  stateText: {
-    color: theme.colors.text.secondary,
-    fontSize: theme.typography.fontSize.sm,
+  searchSkeletonRow: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.08)",
+    backgroundColor: "rgba(248,251,255,0.72)",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   field: { marginTop: 12, gap: 6 },
   label: {

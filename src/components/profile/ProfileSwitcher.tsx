@@ -4,6 +4,7 @@ import {
   useSetActivePatient,
 } from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
+import SkeletonBlock from "@/src/components/loading/SkeletonBlock";
 import { useAuthStore } from "@/src/state/auth.store";
 import { theme } from "@/src/theme";
 import { useUIStore } from "@/state/ui.store";
@@ -46,7 +47,7 @@ export default function ProfileSwitcher() {
   const { showToast } = useUIStore();
   const [showChooser, setShowChooser] = useState(false);
   const { data: activePatientId } = usePrimaryPatientId(userId);
-  const { data: accessiblePatients } = useAccessiblePatients(userId);
+  const { data: accessiblePatients, isLoading } = useAccessiblePatients(userId);
   const setActivePatientMutation = useSetActivePatient(userId);
 
   const patients = accessiblePatients ?? [];
@@ -100,7 +101,17 @@ export default function ProfileSwitcher() {
               Select which patient should be active across the app.
             </AppText>
 
-            {patients.map((patient) => {
+            {isLoading && patients.length === 0
+              ? Array.from({ length: 3 }).map((_, index) => (
+                  <View key={`patient-skeleton-${index}`} style={styles.patientRow}>
+                    <View style={styles.patientRowText}>
+                      <SkeletonBlock width="55%" height={14} />
+                      <SkeletonBlock width="42%" height={12} />
+                      <SkeletonBlock width="48%" height={12} />
+                    </View>
+                  </View>
+                ))
+              : patients.map((patient) => {
               const isActive = patient.id === activePatient?.id;
               return (
                 <Pressable
