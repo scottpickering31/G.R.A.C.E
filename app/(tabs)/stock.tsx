@@ -5,6 +5,7 @@ import {
   useActivePatientMembership,
   useMedications,
   usePrimaryPatientId,
+  useUpdateMedication,
 } from "@/src/api/medications/hooks";
 import { MedicationListItem } from "@/src/api/medications/service";
 import AppText from "@/src/components/AppText";
@@ -14,6 +15,7 @@ import AddMedicationModal from "@/src/components/medications/AddMedicationModal"
 import MedicationDetailModal from "@/src/components/medications/MedicationDetailModal";
 import SwipeableTabScreen from "@/src/components/navigation/SwipeableTabScreen";
 import { useAuthStore } from "@/src/state/auth.store";
+import { useUIStore } from "@/src/state/ui.store";
 import { theme } from "@/src/theme";
 import {
   AlertTriangle,
@@ -23,7 +25,14 @@ import {
   Pill,
 } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
 
 type StockFilter = "all" | "critical" | "watch" | "healthy" | "unset";
 
@@ -118,8 +127,13 @@ export default function Stock() {
   const [showAddMedication, setShowAddMedication] = useState(false);
   const [selectedMedication, setSelectedMedication] =
     useState<MedicationListItem | null>(null);
+  const [refillMedication, setRefillMedication] =
+    useState<MedicationListItem | null>(null);
+  const [refillAmount, setRefillAmount] = useState("");
+  const [useFullCapacity, setUseFullCapacity] = useState(false);
 
   const userId = useAuthStore((s) => s.session?.user.id);
+  const showToast = useUIStore((s) => s.showToast);
   const { data: activeMembership } = useActivePatientMembership(userId);
   const { data: primaryPatientId, refetch: refetchPrimaryPatient } =
     usePrimaryPatientId(userId);
@@ -128,6 +142,7 @@ export default function Stock() {
     isLoading,
     refetch: refetchMedications,
   } = useMedications(primaryPatientId ?? undefined);
+  const updateMedication = useUpdateMedication(primaryPatientId ?? undefined);
 
   const medications = useMemo(() => medicationsData ?? [], [medicationsData]);
   const isReadOnly = activeMembership?.role === "read_only";
@@ -185,6 +200,66 @@ export default function Stock() {
   if (isLoading && !medicationsData) {
     return <Loading />;
   }
+
+  const refillBaseQty = refillMedication?.stock_quantity ?? 0;
+  const refillCapacityQty =
+    refillMedication?.stock_capacity != null && refillMedication.stock_capacity > 0
+      ? refillMedication.stock_capacity
+      : null;
+  const canSetFullCapacity = refillCapacityQty != null;
+  const refillParsedAmount = Number(refillAmount);
+  const refillIsValidAmount =
+    refillAmount.trim().length > 0 &&
+    Number.isFinite(refillParsedAmount) &&
+    refillParsedAmount > 0;
+  const refillNextQty = refillBaseQty + (refillIsValidAmount ? refillParsedAmount : 0);
+  const refillTargetQty =
+    useFullCapacity && canSetFullCapacity ? refillCapacityQty : refillNextQty;
+  const canSubmitRefill =
+    useFullCapacity && canSetFullCapacity
+      ? refillTargetQty > refillBaseQty
+      : refillIsValidAmount;
+
+  const submitRefill = async () => {
+    if (!refillMedication) return;
+    if (isReadOnly) {
+      showToast("Read-only access: stock updates are disabled.", "info");
+      return;
+    }
+    if (!canSubmitRefill) {
+      showToast(
+        useFullCapacity
+          ? "Medication is already at full capacity."
+          : "Enter a valid refill amount greater than 0.",
+        "error",
+      );
+      return;
+    }
+
+    try {
+      await updateMedication.mutateAsync({
+        medicationId: refillMedication.id,
+        name: refillMedication.name,
+        dose: refillMedication.dose ?? undefined,
+        route: refillMedication.route,
+        instructions: refillMedication.instructions ?? undefined,
+        scheduleType: refillMedication.schedule_type,
+        dailyTimes: refillMedication.schedule_times,
+        oneOffDueAt: refillMedication.one_off_due_at ?? undefined,
+        expiresAt: refillMedication.expires_at ?? undefined,
+        stockQuantity: refillTargetQty,
+        stockCapacity: refillMedication.stock_capacity ?? undefined,
+        stockUnit: refillMedication.stock_unit ?? undefined,
+        lowStockThreshold: refillMedication.low_stock_threshold ?? undefined,
+      });
+      showToast("Stock refilled.", "success");
+      setRefillMedication(null);
+      setRefillAmount("");
+      setUseFullCapacity(false);
+    } catch (e: any) {
+      showToast(e?.message ?? "Could not refill stock.", "error");
+    }
+  };
 
   return (
     <SwipeableTabScreen activeRoute="/(tabs)/stock">
@@ -490,6 +565,112 @@ export default function Stock() {
             patientId={primaryPatientId ?? undefined}
             canEdit={!isReadOnly}
           />
+          <Modal
+            visible={!!refillMedication}
+            transparent
+            animationType="fade"
+            onRequestClose={() => {
+              setRefillMedication(null);
+              setRefillAmount("");
+              setUseFullCapacity(false);
+            }}
+          >
+            <Pressable
+              style={styles.refillBackdrop}
+              onPress={() => {
+                setRefillMedication(null);
+                setRefillAmount("");
+                setUseFullCapacity(false);
+              }}
+            >
+              <Pressable style={styles.refillModalCard} onPress={() => {}}>
+                <AppText weight="bold" style={styles.refillTitle}>
+                  Refill Stock
+                </AppText>
+                <AppText style={styles.refillSubtitle}>
+                  {refillMedication?.name ?? ""}
+                </AppText>
+                <AppText style={styles.refillMeta}>
+                  Current:{" "}
+                  {formatQuantity(
+                    refillMedication?.stock_quantity ?? null,
+                    refillMedication?.stock_unit ?? null,
+                  )}
+                </AppText>
+
+                <TextInput
+                  value={refillAmount}
+                  onChangeText={setRefillAmount}
+                  keyboardType="decimal-pad"
+                  placeholder="Add amount (e.g. 100)"
+                  placeholderTextColor="rgba(31,45,61,0.42)"
+                  style={[
+                    styles.refillInput,
+                    useFullCapacity && styles.refillInputDisabled,
+                  ]}
+                  editable={!useFullCapacity}
+                />
+                {canSetFullCapacity ? (
+                  <Pressable
+                    style={[
+                      styles.refillCapacityToggle,
+                      useFullCapacity && styles.refillCapacityToggleActive,
+                    ]}
+                    onPress={() => setUseFullCapacity((prev) => !prev)}
+                  >
+                    <AppText
+                      style={[
+                        styles.refillCapacityToggleText,
+                        useFullCapacity && styles.refillCapacityToggleTextActive,
+                      ]}
+                    >
+                      Set to full capacity (
+                      {formatQuantity(
+                        refillCapacityQty,
+                        refillMedication?.stock_unit ?? null,
+                      )}
+                      )
+                    </AppText>
+                  </Pressable>
+                ) : null}
+
+                <AppText style={styles.refillMeta}>
+                  New total:{" "}
+                  {canSubmitRefill
+                    ? formatQuantity(refillTargetQty, refillMedication?.stock_unit ?? null)
+                    : formatQuantity(refillBaseQty, refillMedication?.stock_unit ?? null)}
+                </AppText>
+
+                <View style={styles.refillActions}>
+                  <Pressable
+                    style={styles.refillCancelBtn}
+                    onPress={() => {
+                      setRefillMedication(null);
+                      setRefillAmount("");
+                      setUseFullCapacity(false);
+                    }}
+                  >
+                    <AppText>Cancel</AppText>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.refillSaveBtn,
+                      (!canSubmitRefill || updateMedication.isPending) &&
+                        styles.refillSaveBtnDisabled,
+                    ]}
+                    disabled={!canSubmitRefill || updateMedication.isPending}
+                    onPress={submitRefill}
+                  >
+                    {updateMedication.isPending ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <AppText style={styles.refillSaveText}>Apply Refill</AppText>
+                    )}
+                  </Pressable>
+                </View>
+              </Pressable>
+            </Pressable>
+          </Modal>
         </Section>
       </Screen>
     </SwipeableTabScreen>
@@ -611,6 +792,21 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.xs,
     fontWeight: "700",
   },
+  refillChip: {
+    marginLeft: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.24)",
+    backgroundColor: "rgba(74,144,226,0.12)",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    alignSelf: "flex-start",
+  },
+  refillChipText: {
+    color: theme.colors.brand.dark,
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: "700",
+  },
   levelBadge: {
     borderRadius: 999,
     paddingHorizontal: 8,
@@ -724,5 +920,98 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(47,133,90,0.16)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  refillBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.30)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  refillModalCard: {
+    width: "100%",
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.9)",
+    backgroundColor: "rgba(255,255,255,0.98)",
+    padding: 14,
+    gap: 8,
+  },
+  refillTitle: {
+    fontSize: theme.typography.fontSize.lg,
+    color: theme.colors.text.primary,
+  },
+  refillSubtitle: {
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  refillMeta: {
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
+  },
+  refillInput: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.16)",
+    backgroundColor: "rgba(255,255,255,0.95)",
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  refillInputDisabled: {
+    opacity: 0.55,
+  },
+  refillCapacityToggle: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.18)",
+    backgroundColor: "rgba(74,144,226,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  refillCapacityToggleActive: {
+    borderColor: "rgba(74,144,226,0.30)",
+    backgroundColor: "rgba(74,144,226,0.16)",
+  },
+  refillCapacityToggleText: {
+    color: theme.colors.brand.dark,
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: "600",
+  },
+  refillCapacityToggleTextActive: {
+    color: theme.colors.brand.dark,
+    fontWeight: "700",
+  },
+  refillActions: {
+    marginTop: 4,
+    flexDirection: "row",
+    gap: 8,
+  },
+  refillCancelBtn: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.18)",
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  refillSaveBtn: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 10,
+    backgroundColor: theme.colors.brand.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  refillSaveBtnDisabled: {
+    opacity: 0.5,
+  },
+  refillSaveText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: theme.typography.fontSize.sm,
   },
 });

@@ -15,20 +15,26 @@ import {
 import AppText from "@/src/components/AppText";
 import CurrentTime from "@/src/components/calendar/CurrentTime";
 import Card from "@/src/components/layout/Card";
-import ListBlock from "@/src/components/layout/ListBlock";
 import Screen from "@/src/components/layout/Screen";
-import SwipeableTabScreen from "@/src/components/navigation/SwipeableTabScreen";
 import AddMedicationModal from "@/src/components/medications/AddMedicationModal";
-import MedicationHistoryModal from "@/src/components/medications/MedicationHistoryModal";
 import MedicationDetailModal from "@/src/components/medications/MedicationDetailModal";
+import MedicationHistoryModal from "@/src/components/medications/MedicationHistoryModal";
 import MedsDueModal, {
   UpcomingMedication,
 } from "@/src/components/medications/MedsDueModal";
+import SwipeableTabScreen from "@/src/components/navigation/SwipeableTabScreen";
 import ProfileHeader from "@/src/components/profile/ProfileHeader";
 import { useAuthStore } from "@/src/state/auth.store";
-import { useUIStore } from "@/state/ui.store";
 import { theme } from "@/src/theme";
-import { AlarmClock, Clock, Pill, Plus, ShieldCheck, Stethoscope } from "lucide-react-native";
+import { useUIStore } from "@/state/ui.store";
+import {
+  AlarmClock,
+  Clock,
+  Pill,
+  Plus,
+  ShieldCheck,
+  Stethoscope,
+} from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
@@ -220,7 +226,10 @@ export default function MedicationsTreatments() {
           </Card>
 
           <View style={styles.metricsRow}>
-            <Pressable onPress={scrollToActiveMedications} style={styles.metricPressable}>
+            <Pressable
+              onPress={scrollToActiveMedications}
+              style={styles.metricPressable}
+            >
               <Card
                 elevationActive={true}
                 borderActive={true}
@@ -234,7 +243,10 @@ export default function MedicationsTreatments() {
                 <AppText style={styles.metricLabel}>Active</AppText>
               </Card>
             </Pressable>
-            <Pressable onPress={() => setShowMedsDue(true)} style={styles.metricPressable}>
+            <Pressable
+              onPress={() => setShowMedsDue(true)}
+              style={styles.metricPressable}
+            >
               <Card
                 elevationActive={true}
                 borderActive={true}
@@ -248,7 +260,10 @@ export default function MedicationsTreatments() {
                 <AppText style={styles.metricLabel}>Due</AppText>
               </Card>
             </Pressable>
-            <Pressable onPress={rotateWindowHours} style={styles.metricPressable}>
+            <Pressable
+              onPress={rotateWindowHours}
+              style={styles.metricPressable}
+            >
               <Card
                 elevationActive={true}
                 borderActive={true}
@@ -257,7 +272,11 @@ export default function MedicationsTreatments() {
               >
                 <Stethoscope size={16} color="#2F855A" />
                 <AppText weight="bold" style={styles.metricValue}>
-                  {medsWindowHours === 168 ? "7D" : medsWindowHours === 24 ? "24H" : "1H"}
+                  {medsWindowHours === 168
+                    ? "7D"
+                    : medsWindowHours === 24
+                      ? "24H"
+                      : "1H"}
                 </AppText>
                 <AppText style={styles.metricLabel}>Window</AppText>
               </Card>
@@ -290,13 +309,19 @@ export default function MedicationsTreatments() {
                 </AppText>
               ) : null}
               <AppText style={styles.featuredDueText}>{nextDueLabel}</AppText>
+              <AppText style={styles.featuredHintText}>
+                Click to see all upcoming medications within the {medsWindowLabel.toLowerCase()}.
+              </AppText>
             </Pressable>
 
             <Pressable
               style={styles.addButton}
               onPress={() => {
                 if (isReadOnly) {
-                  showToast("Read-only access: cannot add medications.", "info");
+                  showToast(
+                    "Read-only access: cannot add medications.",
+                    "info",
+                  );
                   return;
                 }
                 setShowAddMedication(true);
@@ -322,38 +347,83 @@ export default function MedicationsTreatments() {
             }}
           >
             <Card padding="lg" borderActive={true} elevationActive={true}>
-            <View style={styles.sectionTitleRow}>
-              <AppText weight="semibold" style={styles.listTitle}>
-                Active Medications
-              </AppText>
-              <View style={styles.safeChip}>
-                <ShieldCheck size={14} color="#1F6C45" />
-                <AppText style={styles.safeChipText}>Tracking Enabled</AppText>
-              </View>
-            </View>
-
-            {medications.length === 0 ? (
-              <View style={styles.emptyWrap}>
-                <AppText style={styles.emptyText}>
-                  No active medications yet. Tap Add Medication to start.
+              <View style={styles.sectionTitleRow}>
+                <AppText weight="semibold" style={styles.listTitle}>
+                  Active Medications
                 </AppText>
+                <View style={styles.safeChip}>
+                  <ShieldCheck size={14} color="#1F6C45" />
+                  <AppText style={styles.safeChipText}>
+                    Tracking Enabled
+                  </AppText>
+                </View>
               </View>
-            ) : (
-              medications.map((med) => (
-                <ListBlock
-                  key={med.id}
-                  Icon={Pill}
-                  iconBgColor="rgba(74, 144, 226, 0.18)"
-                  title={med.name}
-                  subtitle={`${formatSchedule(med.schedule_type, med.schedule_times, med.one_off_due_at)} • ${formatRoute(med.route)}${med.instructions ? ` • ${med.instructions}` : ""}`}
-                  rightText={`${med.dose ?? "Dose not set"} • ${formatStock(med.stock_quantity, med.stock_unit)}`}
-                  showChevron={true}
-                  onPress={() => {
-                    setSelectedMedication(med);
-                  }}
-                />
-              ))
-            )}
+
+              {medications.length === 0 ? (
+                <View style={styles.emptyWrap}>
+                  <AppText style={styles.emptyText}>
+                    No active medications yet. Tap Add Medication to start.
+                  </AppText>
+                </View>
+              ) : (
+                medications.map((med) => (
+                  <Pressable
+                    key={med.id}
+                    style={styles.activeMedicationRow}
+                    onPress={() => {
+                      setSelectedMedication(med);
+                    }}
+                  >
+                    <AppText
+                      weight="semibold"
+                      style={styles.activeMedicationTitle}
+                    >
+                      {med.name}
+                    </AppText>
+
+                    <AppText style={styles.activeMedicationDataLabel}>
+                      How Often
+                    </AppText>
+                    <AppText style={styles.activeMedicationDataValue}>
+                      {formatSchedule(
+                        med.schedule_type,
+                        med.schedule_times,
+                        med.one_off_due_at,
+                      )}
+                    </AppText>
+
+                    <AppText style={styles.activeMedicationDataLabel}>
+                      Route
+                    </AppText>
+                    <AppText style={styles.activeMedicationDataValue}>
+                      {formatRoute(med.route)}
+                    </AppText>
+
+                    <View style={styles.activeMedicationNoteWrap}>
+                      <AppText style={styles.activeMedicationDataLabel}>
+                        Note
+                      </AppText>
+                      <AppText style={styles.activeMedicationNoteText}>
+                        {med.instructions?.trim() || "No note"}
+                      </AppText>
+                    </View>
+
+                    <View style={styles.activeMedicationMetaRow}>
+                      <View style={styles.activeMedicationMetaPill}>
+                        <AppText style={styles.activeMedicationMetaText}>
+                          Dose: {med.dose ?? "Not set"}
+                        </AppText>
+                      </View>
+                      <View style={styles.activeMedicationMetaPill}>
+                        <AppText style={styles.activeMedicationMetaText}>
+                          Stock Remaining:{" "}
+                          {formatStock(med.stock_quantity, med.stock_unit)}
+                        </AppText>
+                      </View>
+                    </View>
+                  </Pressable>
+                ))
+              )}
             </Card>
           </View>
 
@@ -383,7 +453,8 @@ export default function MedicationsTreatments() {
                   Open Medication History
                 </AppText>
                 <AppText style={styles.historyOpenSubtitle}>
-                  View and update the latest {Math.min(historyItems.length, 50)} history entries.
+                  View and update the latest {Math.min(historyItems.length, 50)}{" "}
+                  history entries.
                 </AppText>
               </Pressable>
             )}
@@ -413,7 +484,9 @@ export default function MedicationsTreatments() {
             visible={showHistoryModal}
             onClose={() => setShowHistoryModal(false)}
             items={historyItems.slice(0, 50)}
-            isSaving={logHistoryException.isPending || clearHistoryException.isPending}
+            isSaving={
+              logHistoryException.isPending || clearHistoryException.isPending
+            }
             canEdit={!isReadOnly}
             onChangeStatus={async (
               item: MedicationHistoryItem,
@@ -443,7 +516,10 @@ export default function MedicationsTreatments() {
                       : "Dose vomited/rejected",
                 });
               } catch (e: any) {
-                showToast(e?.message ?? "Could not update medication status.", "error");
+                showToast(
+                  e?.message ?? "Could not update medication status.",
+                  "error",
+                );
               }
             }}
           />
@@ -586,6 +662,11 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.xs,
     marginTop: 1,
   },
+  featuredHintText: {
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
+    marginTop: 2,
+  },
   listTitle: {
     marginBottom: 2,
     fontSize: theme.typography.fontSize.sm,
@@ -604,6 +685,62 @@ const styles = StyleSheet.create({
   safeChipText: {
     color: "#1F6C45",
     fontSize: theme.typography.fontSize.xs,
+    fontWeight: "600",
+  },
+  activeMedicationRow: {
+    marginTop: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.2)",
+    backgroundColor: "rgba(255,255,255,0.9)",
+    padding: 12,
+    gap: 4,
+  },
+  activeMedicationTitle: {
+    fontSize: theme.typography.fontSize.md,
+    color: theme.colors.text.primary,
+    marginBottom: 2,
+  },
+  activeMedicationDataLabel: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.text.muted,
+    fontWeight: "600",
+  },
+  activeMedicationDataValue: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.primary,
+  },
+  activeMedicationNoteWrap: {
+    marginTop: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.1)",
+    backgroundColor: "rgba(234,243,251,0.48)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 2,
+  },
+  activeMedicationNoteText: {
+    fontSize: theme.typography.fontSize.sm,
+    color: theme.colors.text.secondary,
+  },
+  activeMedicationMetaRow: {
+    marginTop: 6,
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  activeMedicationMetaPill: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.18)",
+    backgroundColor: "rgba(74,144,226,0.1)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  activeMedicationMetaText: {
+    fontSize: theme.typography.fontSize.xs,
+    color: theme.colors.brand.dark,
     fontWeight: "600",
   },
   emptyWrap: {

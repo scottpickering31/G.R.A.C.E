@@ -206,6 +206,8 @@ export default function MedicationDetailModal({
   const [stockCapacity, setStockCapacity] = useState("");
   const [stockUnit, setStockUnit] = useState("tablets");
   const [lowThreshold, setLowThreshold] = useState("");
+  const [refillAmount, setRefillAmount] = useState("");
+  const [useFullCapacity, setUseFullCapacity] = useState(false);
 
   useEffect(() => {
     if (!medication || !visible) return;
@@ -240,6 +242,8 @@ export default function MedicationDetailModal({
     setShowRouteOptions(false);
     setShowDoseUnits(false);
     setShowStockUnits(false);
+    setRefillAmount("");
+    setUseFullCapacity(false);
   }, [medication, visible]);
 
   useEffect(() => {
@@ -259,6 +263,25 @@ export default function MedicationDetailModal({
 
   const stockState = getStockStatus(medication);
   const runoutEstimate = toRunoutEstimate(medication);
+  const refillBaseQty = medication.stock_quantity ?? 0;
+  const refillCapacityQty =
+    medication.stock_capacity != null && medication.stock_capacity > 0
+      ? medication.stock_capacity
+      : null;
+  const canSetFullCapacity = refillCapacityQty != null;
+  const refillParsedAmount = Number(refillAmount);
+  const refillIsValidAmount =
+    refillAmount.trim().length > 0 &&
+    Number.isFinite(refillParsedAmount) &&
+    refillParsedAmount > 0;
+  const refillTargetQty =
+    useFullCapacity && canSetFullCapacity
+      ? refillCapacityQty
+      : refillBaseQty + (refillIsValidAmount ? refillParsedAmount : 0);
+  const canSubmitRefill =
+    useFullCapacity && canSetFullCapacity
+      ? refillTargetQty > refillBaseQty
+      : refillIsValidAmount;
 
   const onSave = async () => {
     const trimmedName = name.trim();
@@ -335,6 +358,42 @@ export default function MedicationDetailModal({
       onClose();
     } catch (e: any) {
       showToast(e?.message ?? "Could not delete medication.", "error");
+    }
+  };
+
+  const onQuickRefill = async () => {
+    if (!canEdit) return;
+    if (!canSubmitRefill) {
+      showToast(
+        useFullCapacity
+          ? "Medication is already at full capacity."
+          : "Enter a valid refill amount greater than 0.",
+        "error",
+      );
+      return;
+    }
+
+    try {
+      await updateMedication.mutateAsync({
+        medicationId: medication.id,
+        name: medication.name,
+        dose: medication.dose ?? undefined,
+        route: medication.route,
+        instructions: medication.instructions ?? undefined,
+        scheduleType: medication.schedule_type,
+        dailyTimes: medication.schedule_times,
+        oneOffDueAt: medication.one_off_due_at ?? undefined,
+        expiresAt: medication.expires_at ?? undefined,
+        stockQuantity: refillTargetQty,
+        stockCapacity: medication.stock_capacity ?? undefined,
+        stockUnit: medication.stock_unit ?? undefined,
+        lowStockThreshold: medication.low_stock_threshold ?? undefined,
+      });
+      showToast("Stock refilled.", "success");
+      setRefillAmount("");
+      setUseFullCapacity(false);
+    } catch (e: any) {
+      showToast(e?.message ?? "Could not refill stock.", "error");
     }
   };
 
@@ -416,6 +475,64 @@ export default function MedicationDetailModal({
                     {stockState.label}
                   </AppText>
                   <AppText style={styles.runoutText}>{runoutEstimate}</AppText>
+
+                  {canEdit ? (
+                    <View style={styles.quickRefillWrap}>
+                      <AppText style={styles.fieldLabel}>Quick refill</AppText>
+                      <TextInput
+                        value={refillAmount}
+                        onChangeText={(t) => setRefillAmount(sanitizeDecimalInput(t))}
+                        keyboardType="decimal-pad"
+                        placeholder="Add amount (e.g. 100)"
+                        style={[
+                          styles.input,
+                          useFullCapacity && styles.quickRefillInputDisabled,
+                        ]}
+                        editable={!useFullCapacity}
+                      />
+                      {canSetFullCapacity ? (
+                        <Pressable
+                          style={[
+                            styles.quickRefillCapacityToggle,
+                            useFullCapacity && styles.quickRefillCapacityToggleActive,
+                          ]}
+                          onPress={() => setUseFullCapacity((prev) => !prev)}
+                        >
+                          <AppText
+                            style={[
+                              styles.quickRefillCapacityText,
+                              useFullCapacity && styles.quickRefillCapacityTextActive,
+                            ]}
+                          >
+                            Set to full capacity (
+                            {`${refillCapacityQty}${medication.stock_unit ? ` ${medication.stock_unit}` : ""}`}
+                            )
+                          </AppText>
+                        </Pressable>
+                      ) : null}
+                      <AppText style={styles.helperText}>
+                        New total:{" "}
+                        {canSubmitRefill
+                          ? `${refillTargetQty}${medication.stock_unit ? ` ${medication.stock_unit}` : ""}`
+                          : `${refillBaseQty}${medication.stock_unit ? ` ${medication.stock_unit}` : ""}`}
+                      </AppText>
+                      <Pressable
+                        style={[
+                          styles.primaryBtn,
+                          (!canSubmitRefill || updateMedication.isPending) &&
+                            styles.disabledBtn,
+                        ]}
+                        disabled={!canSubmitRefill || updateMedication.isPending}
+                        onPress={onQuickRefill}
+                      >
+                        {updateMedication.isPending ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <AppText style={styles.primaryBtnText}>Apply Refill</AppText>
+                        )}
+                      </Pressable>
+                    </View>
+                  ) : null}
                 </View>
               </>
             ) : (
@@ -907,6 +1024,33 @@ const styles = StyleSheet.create({
   },
   disabledDeleteText: {
     color: "rgba(197,48,48,0.85)",
+  },
+  quickRefillWrap: {
+    marginTop: 6,
+    gap: 8,
+  },
+  quickRefillInputDisabled: {
+    opacity: 0.55,
+  },
+  quickRefillCapacityToggle: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.18)",
+    backgroundColor: "rgba(74,144,226,0.08)",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  quickRefillCapacityToggleActive: {
+    borderColor: "rgba(74,144,226,0.30)",
+    backgroundColor: "rgba(74,144,226,0.16)",
+  },
+  quickRefillCapacityText: {
+    color: theme.colors.brand.dark,
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: "600",
+  },
+  quickRefillCapacityTextActive: {
+    fontWeight: "700",
   },
   deleteConfirm: {
     marginTop: 12,

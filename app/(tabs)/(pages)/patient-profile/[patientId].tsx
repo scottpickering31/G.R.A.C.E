@@ -5,7 +5,10 @@ import {
   usePendingAccessRequestsForPatient,
   useResolveAccessRequest,
 } from "@/src/api/access/hooks";
-import { usePatientProfileDetails } from "@/src/api/medications/hooks";
+import {
+  useDeletePatientProfile,
+  usePatientProfileDetails,
+} from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
 import Loading from "@/src/components/Loading";
 import Screen from "@/src/components/layout/Screen";
@@ -13,7 +16,7 @@ import { useAuthStore } from "@/src/state/auth.store";
 import { theme } from "@/src/theme";
 import { useUIStore } from "@/state/ui.store";
 import * as Clipboard from "expo-clipboard";
-import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import {
   CalendarDays,
   Copy,
@@ -24,7 +27,7 @@ import {
   UserRound,
 } from "lucide-react-native";
 import { useState } from "react";
-import { Pressable, Share, StyleSheet, View } from "react-native";
+import { Alert, Pressable, Share, StyleSheet, View } from "react-native";
 
 function formatDob(dob: string | null) {
   if (!dob) return "Not set";
@@ -57,6 +60,7 @@ export default function PatientProfileDetailsPage() {
 
   const { data, isLoading } = usePatientProfileDetails(userId, patientId);
   const isOwner = data?.role === "owner";
+  const deletePatientProfileMutation = useDeletePatientProfile(userId);
   const { data: patientAccessCode } = usePatientAccessCode(
     data?.id,
     userId,
@@ -282,6 +286,67 @@ export default function PatientProfileDetailsPage() {
                 )}
               </Card>
             ) : null}
+
+            <Card padding="md" borderActive={true} elevationActive={true}>
+              <AppText weight="semibold" style={styles.sectionTitle}>
+                Profile Actions
+              </AppText>
+              <AppText style={styles.helperText}>
+                {isOwner
+                  ? "Deleting as owner permanently removes this patient for all linked users."
+                  : "This removes your linked access only. The owner and other members keep access."}
+              </AppText>
+              <Pressable
+                style={styles.deleteProfileBtn}
+                disabled={deletePatientProfileMutation.isPending || !data || !userId}
+                onPress={() => {
+                  if (!data || !userId) return;
+                  const actionLabel = isOwner
+                    ? "Delete Patient Profile"
+                    : "Remove Linked Profile";
+                  const confirmMessage = isOwner
+                    ? `This will permanently delete ${data.display_name} for all users with access.`
+                    : `This will remove ${data.display_name} from your account only.`;
+
+                  Alert.alert(actionLabel, confirmMessage, [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: actionLabel,
+                      style: "destructive",
+                      onPress: async () => {
+                        try {
+                          await deletePatientProfileMutation.mutateAsync({
+                            userId,
+                            patientId: data.id,
+                          });
+                          showToast(
+                            isOwner
+                              ? "Patient profile deleted."
+                              : "Linked profile removed.",
+                            "success",
+                          );
+                          router.replace("/(tabs)/(pages)/patient-profiles");
+                        } catch (e: any) {
+                          showToast(
+                            e?.message ??
+                              "Could not delete this patient profile.",
+                            "error",
+                          );
+                        }
+                      },
+                    },
+                  ]);
+                }}
+              >
+                <AppText style={styles.deleteProfileBtnText}>
+                  {deletePatientProfileMutation.isPending
+                    ? "Processing..."
+                    : isOwner
+                      ? "Delete Patient Profile"
+                      : "Remove Linked Profile"}
+                </AppText>
+              </Pressable>
+            </Card>
           </>
         )}
       </Section>
@@ -465,5 +530,21 @@ const styles = StyleSheet.create({
   emptyText: {
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.xs,
+  },
+  deleteProfileBtn: {
+    marginTop: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(197,48,48,0.25)",
+    backgroundColor: "rgba(197,48,48,0.10)",
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  deleteProfileBtnText: {
+    color: "#C53030",
+    fontSize: theme.typography.fontSize.sm,
+    fontWeight: "700",
   },
 });

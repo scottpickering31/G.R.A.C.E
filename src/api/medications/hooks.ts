@@ -8,6 +8,8 @@ import {
   CreatePatientProfileInput,
   createMedication,
   CreateMedicationInput,
+  deletePatientProfileForUser,
+  DeletePatientProfileInput,
   deleteMedication,
   getMedicationHistory,
   getMedications,
@@ -208,6 +210,26 @@ export function useCreatePatientProfile(userId?: string) {
       qc.invalidateQueries({ queryKey: ["primary-patient-id", userId] });
       qc.invalidateQueries({ queryKey: ["primary-patient", userId] });
       qc.invalidateQueries({ queryKey: ["active-patient-membership", userId] });
+    },
+  });
+}
+
+export function useDeletePatientProfile(userId?: string) {
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: DeletePatientProfileInput) => deletePatientProfileForUser(input),
+    onSuccess: () => {
+      if (!userId) return;
+      qc.invalidateQueries({ queryKey: ["accessible-patients", userId] });
+      qc.invalidateQueries({ queryKey: ["primary-patient-id", userId] });
+      qc.invalidateQueries({ queryKey: ["primary-patient", userId] });
+      qc.invalidateQueries({ queryKey: ["active-patient-membership", userId] });
+      qc.invalidateQueries({ queryKey: ["patient-profile-details", userId] });
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["medications"] });
+      qc.invalidateQueries({ queryKey: ["upcoming-med-doses"] });
+      qc.invalidateQueries({ queryKey: ["medication-history"] });
     },
   });
 }

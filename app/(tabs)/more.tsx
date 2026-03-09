@@ -21,12 +21,14 @@ const ITEMS = [
     subtitle: "Manage family, caregivers, and clinicians.",
     href: "/(tabs)/(pages)/care-circle",
     Icon: UserRoundCog,
+    comingSoon: false,
   },
   {
     label: "Patient Profiles",
     subtitle: "Switch active patient and view access roles.",
     href: "/(tabs)/(pages)/patient-profiles",
     Icon: Stethoscope,
+    comingSoon: false,
   },
   {
     label: "Medical Plans",

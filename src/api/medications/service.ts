@@ -124,6 +124,11 @@ export type SetActivePatientInput = {
   patientId: string;
 };
 
+export type DeletePatientProfileInput = {
+  userId: string;
+  patientId: string;
+};
+
 function isMissingActivePatientColumnError(error: any) {
   if (!error) return false;
   if (error.code === "PGRST204") return true;
@@ -346,6 +351,50 @@ export async function setActivePatient({
       );
     }
     throw upsertError;
+  }
+}
+
+export async function deletePatientProfileForUser({
+  userId,
+  patientId,
+}: DeletePatientProfileInput): Promise<void> {
+  const { data: membership, error: membershipError } = await supabase
+    .from("patient_members")
+    .select("role")
+    .eq("user_id", userId)
+    .eq("patient_id", patientId)
+    .limit(1)
+    .maybeSingle();
+
+  if (membershipError) throw membershipError;
+  if (!membership) {
+    throw new Error("You do not have access to this patient profile.");
+  }
+
+  if (membership.role === "owner") {
+    const { error } = await supabase.from("patients").delete().eq("id", patientId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase
+      .from("patient_members")
+      .delete()
+      .eq("user_id", userId)
+      .eq("patient_id", patientId);
+    if (error) throw error;
+  }
+
+  const nowIso = new Date().toISOString();
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({
+      active_patient_id: null,
+      updated_at: nowIso,
+    } as any)
+    .eq("id", userId)
+    .eq("active_patient_id", patientId);
+
+  if (profileError && !isMissingActivePatientColumnError(profileError)) {
+    throw profileError;
   }
 }
 
