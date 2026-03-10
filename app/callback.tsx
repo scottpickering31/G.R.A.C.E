@@ -16,7 +16,14 @@ function extractAuthParams(url: string) {
 }
 
 function isEmailOtpType(value: string): value is EmailOtpType {
-  return ["signup", "invite", "magiclink", "recovery", "email_change", "email"].includes(value);
+  return [
+    "signup",
+    "invite",
+    "magiclink",
+    "recovery",
+    "email_change",
+    "email",
+  ].includes(value);
 }
 
 export default function AuthCallback() {
@@ -42,7 +49,8 @@ export default function AuthCallback() {
         const type = params.get("type");
 
         if (code) {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          const { error: exchangeError } =
+            await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
         } else if (accessToken && refreshToken) {
           const { error: sessionError } = await supabase.auth.setSession({
@@ -99,9 +107,15 @@ export default function AuthCallback() {
       <AppText style={{ textAlign: "center", opacity: 0.75 }}>{error}</AppText>
       <Pressable
         onPress={() => router.replace("/(auth)/login")}
-        style={{ paddingVertical: 12, borderRadius: 12, backgroundColor: "#111" }}
+        style={{
+          paddingVertical: 12,
+          borderRadius: 12,
+          backgroundColor: "#111",
+        }}
       >
-        <AppText style={{ color: "white", textAlign: "center", fontWeight: "700" }}>
+        <AppText
+          style={{ color: "white", textAlign: "center", fontWeight: "700" }}
+        >
           Back to Login
         </AppText>
       </Pressable>
