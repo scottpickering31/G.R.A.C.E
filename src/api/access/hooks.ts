@@ -78,6 +78,8 @@ export function useResolveAccessRequest(patientId?: string, userId?: string) {
       if (userId) {
         qc.invalidateQueries({ queryKey: ["accessible-patients", userId] });
         qc.invalidateQueries({ queryKey: ["owner-pending-access-requests", userId] });
+        qc.invalidateQueries({ queryKey: ["owner-approved-access", userId] });
+        qc.invalidateQueries({ queryKey: ["patient-profile-details", userId] });
       }
     },
   });

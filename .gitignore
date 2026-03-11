@@ -46,6 +46,7 @@ app-example
 ideas.md
 patient_access_schema_update_code_lookup.sql
 patient_access_schema_update_full_access_and_cancel.sql
+patient_access_schema_update_delete_policies.sql
 patient_access_schema.sql
 patient_members_schema_update_owner_grant_read_only.sql
 medications_schema_update_schedule_stock.sql

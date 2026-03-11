@@ -393,19 +393,38 @@ export async function deletePatientProfileForUser({
     const { error } = await supabase.from("patients").delete().eq("id", patientId);
     if (error) throw error;
   } else {
+    const { data: existingRequestRows, error: existingRequestsError } = await supabase
+      .from("patient_access_requests" as any)
+      .select("id")
+      .eq("requester_user_id", userId)
+      .eq("patient_id", patientId);
+    if (existingRequestsError) throw existingRequestsError;
+
+    const existingRequestIds = (existingRequestRows ?? []).map(
+      (row: any) => row.id as string,
+    );
+
+    if (existingRequestIds.length > 0) {
+      const { data: deletedRequestRows, error: requestCleanupError } = await supabase
+        .from("patient_access_requests" as any)
+        .delete()
+        .in("id", existingRequestIds)
+        .select("id");
+      if (requestCleanupError) throw requestCleanupError;
+
+      if ((deletedRequestRows ?? []).length !== existingRequestIds.length) {
+        throw new Error(
+          "Could not remove the linked access request for this patient profile.",
+        );
+      }
+    }
+
     const { error } = await supabase
       .from("patient_members")
       .delete()
       .eq("user_id", userId)
       .eq("patient_id", patientId);
     if (error) throw error;
-
-    const { error: requestCleanupError } = await supabase
-      .from("patient_access_requests" as any)
-      .delete()
-      .eq("requester_user_id", userId)
-      .eq("patient_id", patientId);
-    if (requestCleanupError) throw requestCleanupError;
   }
 
   const nowIso = new Date().toISOString();

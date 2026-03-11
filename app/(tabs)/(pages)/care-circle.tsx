@@ -32,7 +32,8 @@ export default function CareCircle() {
   const deleteMyRequest = useDeleteMyAccessRequest(userId);
   const revokeApprovedAccess = useRevokeOwnerApprovedAccess(userId);
   const { data: myRequests, refetch } = useMyAccessRequests(userId);
-  const { data: ownerApprovedAccess } = useOwnerApprovedAccess(userId);
+  const { data: ownerApprovedAccess, refetch: refetchOwnerApprovedAccess } =
+    useOwnerApprovedAccess(userId);
 
   const pendingCount = useMemo(
     () => (myRequests ?? []).filter((r) => r.status === "pending").length,
@@ -53,7 +54,7 @@ export default function CareCircle() {
     >
       <Section
         onRefresh={async () => {
-          await refetch();
+          await Promise.all([refetch(), refetchOwnerApprovedAccess()]);
         }}
       >
         <Card

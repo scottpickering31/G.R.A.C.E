@@ -127,16 +127,64 @@ export async function requestAccessByCode(
     }
   };
 
-  const { data: memberRow, error: memberError } = await supabase
+  const { data: memberRows, error: memberError } = await supabase
+    .from("patient_members")
+    .select("patient_id,role")
+    .eq("patient_id", patientId)
+    .eq("user_id", userId)
+    .neq("role", "owner");
+  if (memberError) throw memberError;
+
+  const { data: ownerMembership, error: ownerMembershipError } = await supabase
     .from("patient_members")
     .select("patient_id")
     .eq("patient_id", patientId)
     .eq("user_id", userId)
+    .eq("role", "owner")
     .limit(1)
     .maybeSingle();
-  if (memberError) throw memberError;
-  if (memberRow) {
+  if (ownerMembershipError) throw ownerMembershipError;
+  if (ownerMembership) {
     throw new Error("You already have access to this patient.");
+  }
+
+  const membershipRows = (memberRows ?? []) as {
+    patient_id: string;
+    role: "read_only" | "caregiver" | "clinician";
+  }[];
+  if (membershipRows.length > 0) {
+    const { data: approvedMembershipRows, error: approvedMembershipError } =
+      await supabase
+        .from("patient_access_requests" as any)
+        .select("requested_role")
+        .eq("patient_id", patientId)
+        .eq("requester_user_id", userId)
+        .eq("status", "approved");
+    if (approvedMembershipError) throw approvedMembershipError;
+
+    const approvedRoles = new Set<string>(
+      (approvedMembershipRows ?? []).map((row: any) => row.requested_role as string),
+    );
+    const hasActiveAccess = membershipRows.some((row) => approvedRoles.has(row.role));
+
+    if (hasActiveAccess) {
+      throw new Error("You already have access to this patient.");
+    }
+
+    const staleRoles = membershipRows.map((row) => row.role);
+    const { data: deletedMembershipRows, error: staleMembershipDeleteError } =
+      await supabase
+        .from("patient_members")
+        .delete()
+        .eq("patient_id", patientId)
+        .eq("user_id", userId)
+        .in("role", staleRoles)
+        .select("patient_id,role");
+    if (staleMembershipDeleteError) throw staleMembershipDeleteError;
+
+    if ((deletedMembershipRows ?? []).length !== membershipRows.length) {
+      throw new Error("Could not refresh your patient access. Please try again.");
+    }
   }
 
   const nowIso = new Date().toISOString();
@@ -411,6 +459,32 @@ export async function revokeOwnerApprovedAccess(
   }
 
   const nowIso = new Date().toISOString();
+  const { data: existingMembershipRows, error: existingMembershipError } =
+    await supabase
+      .from("patient_members")
+      .select("patient_id,user_id,role")
+      .eq("patient_id", patientId)
+      .eq("user_id", memberUserId)
+      .neq("role", "owner");
+  if (existingMembershipError) throw existingMembershipError;
+
+  if ((existingMembershipRows ?? []).length > 0) {
+    const removableRoles = (existingMembershipRows ?? []).map((row) => row.role);
+    const { data: deletedMembershipRows, error: deleteMembershipError } =
+      await supabase
+        .from("patient_members")
+        .delete()
+        .eq("patient_id", patientId)
+        .eq("user_id", memberUserId)
+        .in("role", removableRoles)
+        .select("patient_id,user_id,role");
+    if (deleteMembershipError) throw deleteMembershipError;
+
+    if ((deletedMembershipRows ?? []).length !== existingMembershipRows.length) {
+      throw new Error("Could not remove this approved member's patient access.");
+    }
+  }
+
   const { data: deletedRequestRow, error: deleteRequestError } = await supabase
     .from("patient_access_requests" as any)
     .delete()
@@ -423,14 +497,17 @@ export async function revokeOwnerApprovedAccess(
     throw new Error("Could not revoke this approved access request.");
   }
 
-  const { error: deleteMembershipError } = await supabase
+  const { error: clearResidualMembershipError } = await supabase
     .from("patient_members")
     .delete()
     .eq("patient_id", patientId)
     .eq("user_id", memberUserId)
     .neq("role", "owner");
-  if (deleteMembershipError && deleteMembershipError.code !== "PGRST116") {
-    throw deleteMembershipError;
+  if (
+    clearResidualMembershipError &&
+    clearResidualMembershipError.code !== "PGRST116"
+  ) {
+    throw clearResidualMembershipError;
   }
 
   const { error: clearActivePatientError } = await supabase
