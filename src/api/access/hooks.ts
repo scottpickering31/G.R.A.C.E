@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  cancelMyAccessRequest,
   connectReadOnlyAccessByCode,
   AccessRequestItem,
+  deleteMyAccessRequest,
+  getOwnerApprovedAccess,
   OwnerPendingAccessRequestItem,
+  OwnerApprovedAccessItem,
   getMyAccessRequests,
   getOwnerPendingAccessRequests,
   getOrCreatePatientAccessCode,
   getPendingAccessRequestsForPatient,
+  revokeOwnerApprovedAccess,
   requestAccessByCode,
   resolveAccessRequest,
 } from "./service";
@@ -106,14 +109,46 @@ export function useOwnerPendingAccessRequests(userId?: string) {
   });
 }
 
-export function useCancelMyAccessRequest(userId?: string) {
+export function useOwnerApprovedAccess(userId?: string) {
+  return useQuery<OwnerApprovedAccessItem[]>({
+    queryKey: ["owner-approved-access", userId],
+    queryFn: () => getOwnerApprovedAccess(userId!),
+    enabled: !!userId,
+    staleTime: 20_000,
+    refetchInterval: 5_000,
+    refetchOnMount: "always",
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useDeleteMyAccessRequest(userId?: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (requestId: string) => cancelMyAccessRequest(requestId, userId!),
+    mutationFn: (requestId: string) => deleteMyAccessRequest(requestId, userId!),
     onSuccess: () => {
       if (!userId) return;
       qc.invalidateQueries({ queryKey: ["my-access-requests", userId] });
       qc.invalidateQueries({ queryKey: ["owner-pending-access-requests"] });
+    },
+  });
+}
+
+export function useRevokeOwnerApprovedAccess(userId?: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      requestId,
+    }: {
+      requestId: string;
+    }) => revokeOwnerApprovedAccess(userId!, requestId),
+    onSuccess: () => {
+      if (!userId) return;
+      qc.invalidateQueries({ queryKey: ["owner-approved-access", userId] });
+      qc.invalidateQueries({ queryKey: ["accessible-patients"] });
+      qc.invalidateQueries({ queryKey: ["primary-patient-id"] });
+      qc.invalidateQueries({ queryKey: ["primary-patient"] });
+      qc.invalidateQueries({ queryKey: ["active-patient-membership"] });
     },
   });
 }

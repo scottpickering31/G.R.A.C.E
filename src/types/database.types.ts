@@ -223,6 +223,7 @@ export type Database = {
           route: Database["public"]["Enums"]["medication_route"]
           schedule_time: string | null
           schedule_type: Database["public"]["Enums"]["medication_schedule_type"]
+          stock_capacity: number | null
           stock_quantity: number | null
           stock_unit: string | null
           updated_at: string
@@ -242,6 +243,7 @@ export type Database = {
           route?: Database["public"]["Enums"]["medication_route"]
           schedule_time?: string | null
           schedule_type?: Database["public"]["Enums"]["medication_schedule_type"]
+          stock_capacity?: number | null
           stock_quantity?: number | null
           stock_unit?: string | null
           updated_at?: string
@@ -261,6 +263,7 @@ export type Database = {
           route?: Database["public"]["Enums"]["medication_route"]
           schedule_time?: string | null
           schedule_type?: Database["public"]["Enums"]["medication_schedule_type"]
+          stock_capacity?: number | null
           stock_quantity?: number | null
           stock_unit?: string | null
           updated_at?: string
@@ -268,6 +271,94 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "medications_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_access_codes: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          created_by: string
+          id: string
+          patient_id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          created_by: string
+          id?: string
+          patient_id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          patient_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_access_codes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: true
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_access_requests: {
+        Row: {
+          created_at: string
+          id: string
+          note: string | null
+          patient_id: string
+          requested_code: string
+          requested_role: Database["public"]["Enums"]["patient_role"]
+          requester_user_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["patient_access_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          patient_id: string
+          requested_code: string
+          requested_role?: Database["public"]["Enums"]["patient_role"]
+          requester_user_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["patient_access_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          note?: string | null
+          patient_id?: string
+          requested_code?: string
+          requested_role?: Database["public"]["Enums"]["patient_role"]
+          requester_user_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["patient_access_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_access_requests_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
@@ -408,6 +499,11 @@ export type Database = {
         | "intradermal"
         | "other"
       medication_schedule_type: "as_needed" | "daily_same_time" | "one_off"
+      patient_access_request_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "cancelled"
       patient_role: "owner" | "caregiver" | "clinician" | "read_only"
     }
     CompositeTypes: {
@@ -559,6 +655,12 @@ export const Constants = {
         "other",
       ],
       medication_schedule_type: ["as_needed", "daily_same_time", "one_off"],
+      patient_access_request_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "cancelled",
+      ],
       patient_role: ["owner", "caregiver", "clinician", "read_only"],
     },
   },

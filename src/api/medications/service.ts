@@ -126,6 +126,12 @@ export type DeletePatientProfileInput = {
   patientId: string;
 };
 
+type MembershipRow = {
+  patient_id: string;
+  role: Database["public"]["Enums"]["patient_role"];
+  created_at: string;
+};
+
 function isMissingActivePatientColumnError(error: any) {
   if (!error) return false;
   if (error.code === "PGRST204") return true;
@@ -150,33 +156,52 @@ async function getStoredActivePatientId(userId: string): Promise<string | null> 
   return data?.active_patient_id ?? null;
 }
 
+async function getEffectivePatientMemberships(
+  userId: string,
+): Promise<MembershipRow[]> {
+  const { data: memberships, error: membershipsError } = await supabase
+    .from("patient_members")
+    .select("patient_id,role,created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+
+  if (membershipsError) throw membershipsError;
+  if (!memberships || memberships.length === 0) return [];
+
+  const { data: approvedRequests, error: approvedRequestsError } = await supabase
+    .from("patient_access_requests" as any)
+    .select("patient_id,requested_role")
+    .eq("requester_user_id", userId)
+    .eq("status", "approved");
+
+  if (approvedRequestsError) throw approvedRequestsError;
+
+  const approvedMembershipKeys = new Set<string>(
+    (approvedRequests ?? []).map(
+      (row: any) => `${row.patient_id}:${row.requested_role}`,
+    ),
+  );
+
+  return memberships.filter((membership) => {
+    if (membership.role === "owner") return true;
+    return approvedMembershipKeys.has(
+      `${membership.patient_id}:${membership.role}`,
+    );
+  });
+}
+
 export async function getPrimaryPatientId(userId: string) {
   const storedActivePatientId = await getStoredActivePatientId(userId);
+  const effectiveMemberships = await getEffectivePatientMemberships(userId);
 
   if (storedActivePatientId) {
-    const { data: membership, error: membershipError } = await supabase
-      .from("patient_members")
-      .select("patient_id")
-      .eq("user_id", userId)
-      .eq("patient_id", storedActivePatientId)
-      .limit(1)
-      .maybeSingle();
-
-    if (membershipError) throw membershipError;
+    const membership = effectiveMemberships.find(
+      (item) => item.patient_id === storedActivePatientId,
+    );
     if (membership?.patient_id) return membership.patient_id;
   }
 
-  const { data, error } = await supabase
-    .from("patient_members")
-    .select("patient_id")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) return null;
-  return data.patient_id;
+  return effectiveMemberships[0]?.patient_id ?? null;
 }
 
 export async function getPrimaryPatient(userId: string): Promise<PrimaryPatient | null> {
@@ -214,19 +239,14 @@ export async function getActivePatientMembership(
   const activePatientId = await getPrimaryPatientId(userId);
   if (!activePatientId) return null;
 
-  const { data, error } = await supabase
-    .from("patient_members")
-    .select("patient_id,role")
-    .eq("user_id", userId)
-    .eq("patient_id", activePatientId)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) return null;
+  const membership = (await getEffectivePatientMemberships(userId)).find(
+    (item) => item.patient_id === activePatientId,
+  );
+  if (!membership) return null;
 
   return {
-    patientId: data.patient_id,
-    role: data.role,
+    patientId: membership.patient_id,
+    role: membership.role,
   };
 }
 
@@ -234,27 +254,33 @@ export async function getAccessiblePatients(
   userId: string,
 ): Promise<AccessiblePatient[]> {
   const activePatientId = await getPrimaryPatientId(userId);
+  const effectiveMemberships = await getEffectivePatientMemberships(userId);
+  if (effectiveMemberships.length === 0) return [];
 
+  const patientIds = effectiveMemberships.map((item) => item.patient_id);
   const query = supabase
-    .from("patient_members")
-    .select("role,patient:patients(id,display_name,dob)")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: true });
+    .from("patients")
+    .select("id,display_name,dob")
+    .in("id", patientIds);
 
-  type PatientMemberWithJoin = QueryData<typeof query>[number];
+  type PatientRow = QueryData<typeof query>[number];
   const { data, error } = await query;
 
   if (error) throw error;
 
+  const membershipByPatientId = new Map(
+    effectiveMemberships.map((item) => [item.patient_id, item]),
+  );
+
   return (data ?? [])
-    .map((row: PatientMemberWithJoin) => {
-      const patient = Array.isArray(row.patient) ? row.patient[0] : row.patient;
-      if (!patient) return null;
+    .map((patient: PatientRow) => {
+      const membership = membershipByPatientId.get(patient.id);
+      if (!membership) return null;
       return {
         id: patient.id,
         display_name: patient.display_name,
         dob: patient.dob,
-        role: row.role,
+        role: membership.role,
         isActive: patient.id === activePatientId,
       };
     })
@@ -266,31 +292,32 @@ export async function getPatientProfileDetails(
   patientId: string,
 ): Promise<PatientProfileDetails | null> {
   const activePatientId = await getPrimaryPatientId(userId);
+  const membership = (await getEffectivePatientMemberships(userId)).find(
+    (item) => item.patient_id === patientId,
+  );
+  if (!membership) return null;
 
   const query = supabase
-    .from("patient_members")
-    .select("role,patient:patients(id,display_name,dob,sex)")
-    .eq("user_id", userId)
-    .eq("patient_id", patientId)
+    .from("patients")
+    .select("id,display_name,dob,sex")
+    .eq("id", patientId)
     .limit(1)
     .maybeSingle();
 
-  type PatientDetailsJoin = QueryData<typeof query>;
+  type PatientDetailsRow = QueryData<typeof query>;
   const { data, error } = await query;
 
   if (error) throw error;
   if (!data) return null;
 
-  const row = data as NonNullable<PatientDetailsJoin>;
-  const patient = Array.isArray(row.patient) ? row.patient[0] : row.patient;
-  if (!patient) return null;
+  const patient = data as NonNullable<PatientDetailsRow>;
 
   return {
     id: patient.id,
     display_name: patient.display_name,
     dob: patient.dob,
     sex: patient.sex,
-    role: row.role,
+    role: membership.role,
     isActive: patient.id === activePatientId,
   };
 }
@@ -299,15 +326,9 @@ export async function setActivePatient({
   userId,
   patientId,
 }: SetActivePatientInput): Promise<void> {
-  const { data: membership, error: membershipError } = await supabase
-    .from("patient_members")
-    .select("patient_id")
-    .eq("user_id", userId)
-    .eq("patient_id", patientId)
-    .limit(1)
-    .maybeSingle();
-
-  if (membershipError) throw membershipError;
+  const membership = (await getEffectivePatientMemberships(userId)).find(
+    (item) => item.patient_id === patientId,
+  );
   if (!membership) {
     throw new Error("You do not have access to this patient profile.");
   }
@@ -378,6 +399,13 @@ export async function deletePatientProfileForUser({
       .eq("user_id", userId)
       .eq("patient_id", patientId);
     if (error) throw error;
+
+    const { error: requestCleanupError } = await supabase
+      .from("patient_access_requests" as any)
+      .delete()
+      .eq("requester_user_id", userId)
+      .eq("patient_id", patientId);
+    if (requestCleanupError) throw requestCleanupError;
   }
 
   const nowIso = new Date().toISOString();

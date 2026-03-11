@@ -4,7 +4,7 @@ import {
 } from "@/src/api/onboarding/hooks";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
-import PageSkeleton from "@/src/components/loading/PageSkeleton";
+import DashboardSkeleton from "@/src/components/loading/DashboardSkeleton";
 import { theme } from "@/src/theme";
 import { useAuthStore } from "@/src/state/auth.store";
 import { useRouter } from "expo-router";
@@ -66,14 +66,7 @@ export default function PostLoginGate() {
   ]);
 
   if (!hydrated || onboardingLoading || patientLoading) {
-    return (
-      <PageSkeleton
-        screenBackground={require("@/assets/images/welcome-dreamscape.png")}
-        showHeader={false}
-        sectionCount={1}
-        rowCount={3}
-      />
-    );
+    return <DashboardSkeleton />;
   }
 
   if (onboardingError || patientError) {
@@ -110,12 +103,5 @@ export default function PostLoginGate() {
     );
   }
 
-  return (
-    <PageSkeleton
-      screenBackground={require("@/assets/images/welcome-dreamscape.png")}
-      showHeader={false}
-      sectionCount={1}
-      rowCount={2}
-    />
-  );
+  return <DashboardSkeleton />;
 }

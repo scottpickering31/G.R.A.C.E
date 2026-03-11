@@ -1,6 +1,7 @@
 import BackToHomeButton from "@/components/buttons/BackToHomeButton";
 import { useOwnerPendingAccessRequests } from "@/src/api/access/hooks";
-import PageSkeleton from "@/src/components/loading/PageSkeleton";
+import DashboardSkeleton from "@/src/components/loading/DashboardSkeleton";
+import { useAccessiblePatients } from "@/src/api/medications/hooks";
 import { theme } from "@/src/theme";
 import { useAuthStore } from "@/state/auth.store";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,12 +17,20 @@ export default function TabsLayout() {
   const hydrated = useAuthStore((s) => s.hydrated);
   const userId = session?.user.id;
   const { data: ownerPendingRequests } = useOwnerPendingAccessRequests(userId);
+  const { data: accessiblePatients, isLoading: patientsLoading } =
+    useAccessiblePatients(userId);
   const pendingCount = ownerPendingRequests?.length ?? 0;
 
   if (!hydrated) {
-    return <PageSkeleton sectionCount={2} rowCount={3} />;
+    return <DashboardSkeleton />;
   }
   if (!session) return <Redirect href="/(auth)/post-login" />;
+  if (patientsLoading && !accessiblePatients) {
+    return <DashboardSkeleton />;
+  }
+  if ((accessiblePatients?.length ?? 0) === 0) {
+    return <Redirect href="/(auth)/post-login" />;
+  }
 
   return (
     <Tabs
@@ -134,6 +143,7 @@ export default function TabsLayout() {
         name="appointments"
         options={{
           title: "Appts",
+          headerTitle: "Appointments & Events",
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? "calendar" : "calendar-outline"}

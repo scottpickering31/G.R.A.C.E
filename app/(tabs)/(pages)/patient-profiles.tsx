@@ -11,10 +11,15 @@ import Card from "@/src/components/layout/Card";
 import Screen from "@/src/components/layout/Screen";
 import PageSkeleton from "@/src/components/loading/PageSkeleton";
 import { useAuthStore } from "@/src/state/auth.store";
-import { useUIStore } from "@/state/ui.store";
 import { theme } from "@/src/theme";
+import { useUIStore } from "@/state/ui.store";
 import { router } from "expo-router";
-import { CalendarDays, Plus, ShieldCheck, UserRound } from "lucide-react-native";
+import {
+  CalendarDays,
+  Plus,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react-native";
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 
@@ -94,9 +99,7 @@ export default function PatientProfiles() {
             <AppText weight="semibold" style={styles.sectionTitle}>
               Accessible Patients
             </AppText>
-            <AppText style={styles.sectionHint}>
-              {patientCount}/2
-            </AppText>
+            <AppText style={styles.sectionHint}>{patientCount}/2</AppText>
           </View>
           <Pressable
             style={[
@@ -131,7 +134,8 @@ export default function PatientProfiles() {
             </View>
           ) : (
             accessiblePatients.map((patient) => {
-              const isActive = patient.id === activePatientId || patient.isActive;
+              const isActive =
+                patient.id === activePatientId || patient.isActive;
               return (
                 <Pressable
                   key={patient.id}
@@ -154,13 +158,20 @@ export default function PatientProfiles() {
                       {isActive ? (
                         <View style={styles.activeBadge}>
                           <ShieldCheck size={12} color="#1F6C45" />
-                          <AppText style={styles.activeBadgeText}>Active</AppText>
+                          <AppText style={styles.activeBadgeText}>
+                            Active
+                          </AppText>
                         </View>
                       ) : null}
                     </View>
                     <View style={styles.metaRow}>
-                      <CalendarDays size={12} color={theme.colors.text.secondary} />
-                      <AppText style={styles.metaText}>{formatDob(patient.dob)}</AppText>
+                      <CalendarDays
+                        size={12}
+                        color={theme.colors.text.secondary}
+                      />
+                      <AppText style={styles.metaText}>
+                        {formatDob(patient.dob)}
+                      </AppText>
                     </View>
                     <AppText style={styles.metaText}>
                       Access Role: {roleLabel(patient.role)}
@@ -172,7 +183,9 @@ export default function PatientProfiles() {
                         </AppText>
                       </View>
                     ) : null}
-                    <AppText style={styles.viewHintText}>Tap to view profile details</AppText>
+                    <AppText style={styles.viewHintText}>
+                      Tap to view profile details
+                    </AppText>
                     {!isActive ? (
                       <Pressable
                         style={styles.setActiveBtn}
@@ -197,7 +210,10 @@ export default function PatientProfiles() {
                           }
                         }}
                       >
-                        <AppText weight="semibold" style={styles.setActiveBtnText}>
+                        <AppText
+                          weight="semibold"
+                          style={styles.setActiveBtnText}
+                        >
                           Set Active
                         </AppText>
                       </Pressable>
@@ -242,10 +258,15 @@ export default function PatientProfiles() {
             <AppText weight="semibold" style={styles.inputLabel}>
               Date of Birth *
             </AppText>
-            <Pressable style={styles.input} onPress={() => setShowDobCalendar(true)}>
+            <Pressable
+              style={styles.input}
+              onPress={() => setShowDobCalendar(true)}
+            >
               <AppText
                 style={
-                  newPatientDobDate ? styles.inputValueText : styles.inputPlaceholderText
+                  newPatientDobDate
+                    ? styles.inputValueText
+                    : styles.inputPlaceholderText
                 }
               >
                 {newPatientDobDate
@@ -290,7 +311,10 @@ export default function PatientProfiles() {
                     setNewPatientName("");
                     setNewPatientDobDate(null);
                   } catch (e: any) {
-                    showToast(e?.message ?? "Could not create patient profile.", "error");
+                    showToast(
+                      e?.message ?? "Could not create patient profile.",
+                      "error",
+                    );
                   }
                 }}
               >
@@ -478,6 +502,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(31,45,61,0.14)",
     backgroundColor: "rgba(255,255,255,0.68)",
     padding: 12,
+    marginTop: 10,
   },
   emptyText: {
     color: theme.colors.text.secondary,

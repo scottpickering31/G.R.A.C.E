@@ -3,12 +3,12 @@ import Card from "@/components/layout/Card";
 import ListBlock from "@/components/layout/ListBlock";
 import Screen from "@/components/layout/Screen";
 import Section from "@/components/layout/Section";
+import { useAppointments } from "@/src/api/appointments/hooks";
 import {
   useMedications,
   usePrimaryPatientId,
   useUpcomingMedicationDoses,
 } from "@/src/api/medications/hooks";
-import { useAppointments } from "@/src/api/appointments/hooks";
 import AppText from "@/src/components/AppText";
 import CurrentTime from "@/src/components/calendar/CurrentTime";
 import MedsDueModal, {
@@ -23,11 +23,11 @@ import { theme } from "@/src/theme";
 import { colors } from "@/styles/shared-styles";
 import { router } from "expo-router";
 import {
-  AlertTriangle,
   BriefcaseMedical,
   CalendarClock,
   ChevronRight,
   Clock,
+  HeartHandshake,
   Package,
   Pill,
 } from "lucide-react-native";
@@ -84,7 +84,9 @@ export default function Dashboard() {
     const appointments = appointmentsData ?? [];
     return appointments.filter((item) => {
       const startsAtMs = new Date(item.startsAt).getTime();
-      return Number.isFinite(startsAtMs) && startsAtMs >= now && !item.completed;
+      return (
+        Number.isFinite(startsAtMs) && startsAtMs >= now && !item.completed
+      );
     }).length;
   }, [appointmentsData]);
   const stockStatusLabel = useMemo(() => {
@@ -93,7 +95,9 @@ export default function Dashboard() {
       (med) => getHomeStockLevel(med) === "critical",
     ).length;
     if (critical > 0) return `${critical} Critical`;
-    const low = medications.filter((med) => getHomeStockLevel(med) === "watch").length;
+    const low = medications.filter(
+      (med) => getHomeStockLevel(med) === "watch",
+    ).length;
     if (low > 0) return `${low} Low`;
     return "All Good";
   }, [medicationsData]);
@@ -204,7 +208,9 @@ export default function Dashboard() {
                   title="Appointments"
                   subtitle="Review today's schedule"
                   rightText={`${upcomingAppointmentsCount} ${
-                    upcomingAppointmentsCount === 1 ? "Appointment" : "Appointments"
+                    upcomingAppointmentsCount === 1
+                      ? "Appointment"
+                      : "Appointments"
                   }`}
                   rightTextContainer={{
                     backgroundColor: "rgba(126, 200, 160, 0.22)",
@@ -225,11 +231,11 @@ export default function Dashboard() {
                 />
 
                 <ListBlock
-                  Icon={AlertTriangle}
+                  Icon={HeartHandshake}
                   iconBgColor="rgba(233, 107, 107, 0.22)"
                   iconColor={colors.semantic.danger}
-                  title="Alerts"
-                  subtitle="Insulin dose deviation"
+                  title="Care Circle"
+                  subtitle="For family, caregivers, and clinicians"
                   rightText="View all"
                   rightTextContainer={{
                     backgroundColor: colors.bg.danger,

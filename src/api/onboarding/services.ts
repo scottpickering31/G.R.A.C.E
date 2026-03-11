@@ -47,13 +47,32 @@ export async function isOnboardingCompleted(userId: string) {
 }
 
 export async function hasPatientAccess(userId: string) {
-  const { data, error } = await supabase
+  const { data: memberships, error: membershipsError } = await supabase
     .from("patient_members")
-    .select("patient_id")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
+    .select("patient_id,role")
+    .eq("user_id", userId);
 
-  if (error) throw error;
-  return !!data;
+  if (membershipsError) throw membershipsError;
+  if (!memberships || memberships.length === 0) return false;
+
+  const ownerAccess = memberships.some((membership) => membership.role === "owner");
+  if (ownerAccess) return true;
+
+  const { data: approvedRequests, error: approvedRequestsError } = await supabase
+    .from("patient_access_requests" as any)
+    .select("patient_id,requested_role")
+    .eq("requester_user_id", userId)
+    .eq("status", "approved");
+
+  if (approvedRequestsError) throw approvedRequestsError;
+
+  const approvedMembershipKeys = new Set<string>(
+    (approvedRequests ?? []).map(
+      (row: any) => `${row.patient_id}:${row.requested_role}`,
+    ),
+  );
+
+  return memberships.some((membership) =>
+    approvedMembershipKeys.has(`${membership.patient_id}:${membership.role}`),
+  );
 }

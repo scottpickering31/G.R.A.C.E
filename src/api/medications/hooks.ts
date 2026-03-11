@@ -34,7 +34,11 @@ export function usePrimaryPatientId(userId?: string) {
     queryKey: ["primary-patient-id", userId],
     queryFn: () => getPrimaryPatientId(userId!),
     enabled: !!userId,
-    staleTime: 60_000,
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+    refetchOnMount: "always",
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -43,7 +47,11 @@ export function usePrimaryPatient(userId?: string) {
     queryKey: ["primary-patient", userId],
     queryFn: () => getPrimaryPatient(userId!),
     enabled: !!userId,
-    staleTime: 60_000,
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+    refetchOnMount: "always",
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -52,7 +60,11 @@ export function useActivePatientMembership(userId?: string) {
     queryKey: ["active-patient-membership", userId],
     queryFn: () => getActivePatientMembership(userId!),
     enabled: !!userId,
-    staleTime: 30_000,
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+    refetchOnMount: "always",
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -61,7 +73,11 @@ export function useAccessiblePatients(userId?: string) {
     queryKey: ["accessible-patients", userId],
     queryFn: () => getAccessiblePatients(userId!),
     enabled: !!userId,
-    staleTime: 60_000,
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+    refetchOnMount: "always",
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -190,6 +206,7 @@ export function useSetActivePatient(userId?: string) {
       qc.invalidateQueries({ queryKey: ["primary-patient-id", userId] });
       qc.invalidateQueries({ queryKey: ["primary-patient", userId] });
       qc.invalidateQueries({ queryKey: ["active-patient-membership", userId] });
+      qc.invalidateQueries({ queryKey: ["my-access-requests", userId] });
       qc.invalidateQueries({ queryKey: ["patient-profile-details", userId] });
       qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["medications"] });

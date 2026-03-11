@@ -415,7 +415,6 @@ export default function MedicationsTreatments() {
                           Dose: {med.dose ?? "Not set"}
                         </AppText>
                       </View>
-                      -
                       <View style={styles.activeMedicationMetaPill}>
                         <AppText style={styles.activeMedicationMetaText}>
                           Stock Remaining:{" "}

@@ -1,6 +1,10 @@
 import { supabase } from "@/services/supabase";
 
-export type AccessRequestStatus = "pending" | "approved" | "rejected" | "cancelled";
+export type AccessRequestStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "cancelled";
 
 export type AccessRequestItem = {
   id: string;
@@ -14,6 +18,15 @@ export type AccessRequestItem = {
 
 export type OwnerPendingAccessRequestItem = AccessRequestItem & {
   patientName: string;
+};
+
+export type OwnerApprovedAccessItem = {
+  requestId: string;
+  patientId: string;
+  patientName: string;
+  memberUserId: string;
+  role: "read_only" | "caregiver" | "clinician";
+  createdAt: string;
 };
 
 function isMissingActivePatientColumnError(error: any) {
@@ -95,6 +108,24 @@ export async function requestAccessByCode(
   }
 
   const patientId = resolvedPatientId;
+  const createPendingRequest = async () => {
+    const { error } = await supabase
+      .from("patient_access_requests" as any)
+      .insert({
+        patient_id: patientId,
+        requester_user_id: userId,
+        requested_role: requestedRole,
+        status: "pending",
+        requested_code: code,
+        note: trimmedNote,
+      });
+    if (error) {
+      if (error.code === "23505") {
+        throw new Error("You already have a pending request for this patient.");
+      }
+      throw error;
+    }
+  };
 
   const { data: memberRow, error: memberError } = await supabase
     .from("patient_members")
@@ -108,28 +139,76 @@ export async function requestAccessByCode(
     throw new Error("You already have access to this patient.");
   }
 
-  const { error } = await supabase
-    .from("patient_access_requests" as any)
-    .insert({
-      patient_id: patientId,
-      requester_user_id: userId,
-      requested_role: requestedRole,
-      status: "pending",
-      requested_code: code,
-      note: note?.trim() || null,
-    });
-  if (error) {
-    if (error.code === "23505") {
-      throw new Error("You already have a pending request for this patient.");
+  const nowIso = new Date().toISOString();
+  const trimmedNote = note?.trim() || null;
+  const { data: existingRequests, error: existingRequestsError } =
+    await supabase
+      .from("patient_access_requests" as any)
+      .select("id,status")
+      .eq("patient_id", patientId)
+      .eq("requester_user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+  if (existingRequestsError) throw existingRequestsError;
+
+  const pendingRequest = (existingRequests ?? []).find(
+    (row: any) => row.status === "pending",
+  );
+  if (pendingRequest) {
+    const { data: updatedPendingRow, error: updatePendingError } = await supabase
+      .from("patient_access_requests" as any)
+      .update({
+        requested_role: requestedRole,
+        requested_code: code,
+        note: trimmedNote,
+        updated_at: nowIso,
+      })
+      .eq("id", pendingRequest.id)
+      .select("id")
+      .maybeSingle();
+    if (updatePendingError) throw updatePendingError;
+    if (!updatedPendingRow) {
+      throw new Error("Could not refresh your pending access request.");
     }
-    throw error;
+    return;
   }
+
+  const reusableRequest = (existingRequests ?? []).find((row: any) =>
+    ["approved", "rejected", "cancelled"].includes(row.status),
+  );
+  if (reusableRequest) {
+    const { data: reusedRow, error: reuseError } = await supabase
+      .from("patient_access_requests" as any)
+      .update({
+        requested_role: requestedRole,
+        status: "pending",
+        requested_code: code,
+        note: trimmedNote,
+        resolved_by: null,
+        resolved_at: null,
+        updated_at: nowIso,
+      })
+      .eq("id", reusableRequest.id)
+      .select("id")
+      .maybeSingle();
+    if (reuseError) throw reuseError;
+    if (!reusedRow) {
+      await createPendingRequest();
+    }
+    return;
+  }
+
+  await createPendingRequest();
 }
 
-export async function getMyAccessRequests(userId: string): Promise<AccessRequestItem[]> {
+export async function getMyAccessRequests(
+  userId: string,
+): Promise<AccessRequestItem[]> {
   const { data, error } = await supabase
     .from("patient_access_requests" as any)
-    .select("id,patient_id,requester_user_id,requested_role,status,created_at,note")
+    .select(
+      "id,patient_id,requester_user_id,requested_role,status,created_at,note",
+    )
     .eq("requester_user_id", userId)
     .order("created_at", { ascending: false })
     .limit(25);
@@ -150,7 +229,9 @@ export async function getPendingAccessRequestsForPatient(
 ): Promise<AccessRequestItem[]> {
   const { data, error } = await supabase
     .from("patient_access_requests" as any)
-    .select("id,patient_id,requester_user_id,requested_role,status,created_at,note")
+    .select(
+      "id,patient_id,requester_user_id,requested_role,status,created_at,note",
+    )
     .eq("patient_id", patientId)
     .eq("status", "pending")
     .order("created_at", { ascending: true })
@@ -182,7 +263,9 @@ export async function getOwnerPendingAccessRequests(
 
   const { data, error } = await supabase
     .from("patient_access_requests" as any)
-    .select("id,patient_id,requester_user_id,requested_role,status,created_at,note")
+    .select(
+      "id,patient_id,requester_user_id,requested_role,status,created_at,note",
+    )
     .in("patient_id", ownedPatientIds)
     .eq("status", "pending")
     .order("created_at", { ascending: true })
@@ -208,6 +291,47 @@ export async function getOwnerPendingAccessRequests(
     status: row.status,
     createdAt: row.created_at,
     note: row.note ?? "",
+  }));
+}
+
+export async function getOwnerApprovedAccess(
+  userId: string,
+): Promise<OwnerApprovedAccessItem[]> {
+  const { data: ownedRows, error: ownedError } = await supabase
+    .from("patient_members")
+    .select("patient_id")
+    .eq("user_id", userId)
+    .eq("role", "owner");
+  if (ownedError) throw ownedError;
+
+  const ownedPatientIds = (ownedRows ?? []).map((row) => row.patient_id);
+  if (ownedPatientIds.length === 0) return [];
+
+  const { data: approvedRows, error: approvedError } = await supabase
+    .from("patient_access_requests" as any)
+    .select("id,patient_id,requester_user_id,requested_role,created_at,status")
+    .in("patient_id", ownedPatientIds)
+    .eq("status", "approved")
+    .order("created_at", { ascending: true });
+  if (approvedError) throw approvedError;
+
+  const { data: patientRows, error: patientError } = await supabase
+    .from("patients")
+    .select("id,display_name")
+    .in("id", ownedPatientIds);
+  if (patientError) throw patientError;
+
+  const patientNameById = new Map<string, string>(
+    (patientRows ?? []).map((row) => [row.id, row.display_name]),
+  );
+
+  return (approvedRows ?? []).map((row: any) => ({
+    requestId: row.id,
+    patientId: row.patient_id,
+    patientName: patientNameById.get(row.patient_id) ?? "Patient",
+    memberUserId: row.requester_user_id,
+    role: row.requested_role,
+    createdAt: row.created_at,
   }));
 }
 
@@ -242,22 +366,87 @@ export async function resolveAccessRequest(
   if (memberError && memberError.code !== "23505") throw memberError;
 }
 
-export async function cancelMyAccessRequest(
+export async function deleteMyAccessRequest(
   requestId: string,
   userId: string,
 ): Promise<void> {
-  const nowIso = new Date().toISOString();
   const { error } = await supabase
     .from("patient_access_requests" as any)
-    .update({
-      status: "cancelled",
-      updated_at: nowIso,
-      resolved_at: nowIso,
-    })
+    .delete()
     .eq("id", requestId)
     .eq("requester_user_id", userId)
-    .eq("status", "pending");
+    .in("status", ["pending", "cancelled", "rejected"]);
   if (error) throw error;
+}
+
+export async function revokeOwnerApprovedAccess(
+  ownerUserId: string,
+  requestId: string,
+): Promise<void> {
+  const { data: requestRow, error: requestRowError } = await supabase
+    .from("patient_access_requests" as any)
+    .select("id,patient_id,requester_user_id,status")
+    .eq("id", requestId)
+    .eq("status", "approved")
+    .maybeSingle();
+  if (requestRowError) throw requestRowError;
+  if (!requestRow) {
+    throw new Error("This approved access request could not be found.");
+  }
+
+  const patientId = requestRow.patient_id as string;
+  const memberUserId = requestRow.requester_user_id as string;
+
+  const { data: ownerMembership, error: ownerMembershipError } = await supabase
+    .from("patient_members")
+    .select("patient_id")
+    .eq("patient_id", patientId)
+    .eq("user_id", ownerUserId)
+    .eq("role", "owner")
+    .limit(1)
+    .maybeSingle();
+  if (ownerMembershipError) throw ownerMembershipError;
+  if (!ownerMembership) {
+    throw new Error("Only the patient owner can remove this access.");
+  }
+
+  const nowIso = new Date().toISOString();
+  const { data: deletedRequestRow, error: deleteRequestError } = await supabase
+    .from("patient_access_requests" as any)
+    .delete()
+    .eq("id", requestId)
+    .eq("status", "approved")
+    .select("id")
+    .maybeSingle();
+  if (deleteRequestError) throw deleteRequestError;
+  if (!deletedRequestRow) {
+    throw new Error("Could not revoke this approved access request.");
+  }
+
+  const { error: deleteMembershipError } = await supabase
+    .from("patient_members")
+    .delete()
+    .eq("patient_id", patientId)
+    .eq("user_id", memberUserId)
+    .neq("role", "owner");
+  if (deleteMembershipError && deleteMembershipError.code !== "PGRST116") {
+    throw deleteMembershipError;
+  }
+
+  const { error: clearActivePatientError } = await supabase
+    .from("profiles")
+    .update({
+      active_patient_id: null,
+      updated_at: nowIso,
+    } as any)
+    .eq("id", memberUserId)
+    .eq("active_patient_id", patientId);
+  if (
+    clearActivePatientError &&
+    !isMissingActivePatientColumnError(clearActivePatientError)
+  ) {
+    throw clearActivePatientError;
+  }
 }
 
 export async function connectReadOnlyAccessByCode(
@@ -292,11 +481,13 @@ export async function connectReadOnlyAccessByCode(
   if (existingError) throw existingError;
 
   if (!existingMembership) {
-    const { error: insertError } = await supabase.from("patient_members").insert({
-      patient_id: patientId,
-      user_id: userId,
-      role: "read_only",
-    });
+    const { error: insertError } = await supabase
+      .from("patient_members")
+      .insert({
+        patient_id: patientId,
+        user_id: userId,
+        role: "read_only",
+      });
     if (insertError && insertError.code !== "23505") throw insertError;
   }
 
@@ -312,18 +503,19 @@ export async function connectReadOnlyAccessByCode(
   if (!updateProfileError) return;
   if (isMissingActivePatientColumnError(updateProfileError)) return;
 
-  const { error: upsertProfileError } = await supabase
-    .from("profiles")
-    .upsert(
-      {
-        id: userId,
-        active_patient_id: patientId,
-        updated_at: nowIso,
-      } as any,
-      { onConflict: "id" },
-    );
+  const { error: upsertProfileError } = await supabase.from("profiles").upsert(
+    {
+      id: userId,
+      active_patient_id: patientId,
+      updated_at: nowIso,
+    } as any,
+    { onConflict: "id" },
+  );
 
-  if (upsertProfileError && !isMissingActivePatientColumnError(upsertProfileError)) {
+  if (
+    upsertProfileError &&
+    !isMissingActivePatientColumnError(upsertProfileError)
+  ) {
     throw upsertProfileError;
   }
 }

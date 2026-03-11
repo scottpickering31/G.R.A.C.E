@@ -1,17 +1,17 @@
 import Card from "@/components/layout/Card";
 import Section from "@/components/layout/Section";
 import {
-  useCancelMyAccessRequest,
+  useDeleteMyAccessRequest,
   useMyAccessRequests,
+  useOwnerApprovedAccess,
   useRequestReadOnlyAccess,
+  useRevokeOwnerApprovedAccess,
 } from "@/src/api/access/hooks";
-import { useAccessiblePatients } from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
 import Screen from "@/src/components/layout/Screen";
 import { useAuthStore } from "@/src/state/auth.store";
 import { useUIStore } from "@/state/ui.store";
 import { theme } from "@/src/theme";
-import { router } from "expo-router";
 import { ShieldCheck, UsersRound } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
@@ -29,25 +29,22 @@ export default function CareCircle() {
     "read_only",
   );
   const requestReadOnlyAccess = useRequestReadOnlyAccess(userId);
-  const cancelMyRequest = useCancelMyAccessRequest(userId);
+  const deleteMyRequest = useDeleteMyAccessRequest(userId);
+  const revokeApprovedAccess = useRevokeOwnerApprovedAccess(userId);
   const { data: myRequests, refetch } = useMyAccessRequests(userId);
-  const { data: accessiblePatients } = useAccessiblePatients(userId);
+  const { data: ownerApprovedAccess } = useOwnerApprovedAccess(userId);
 
   const pendingCount = useMemo(
     () => (myRequests ?? []).filter((r) => r.status === "pending").length,
     [myRequests],
   );
-  const approvedPatients = useMemo(
-    () =>
-      (accessiblePatients ?? []).filter(
-        (p) => p.role === "read_only" || p.role === "caregiver",
-      ),
-    [accessiblePatients],
-  );
+  const linkedMembers = ownerApprovedAccess ?? [];
   const currentRequests = useMemo(
     () => (myRequests ?? []).filter((r) => r.status !== "approved"),
     [myRequests],
   );
+  const canDeleteRequest = (status: typeof currentRequests[number]["status"]) =>
+    status === "pending" || status === "cancelled" || status === "rejected";
 
   return (
     <Screen
@@ -202,20 +199,29 @@ export default function CareCircle() {
                     </AppText>
                   </View>
                 </View>
-                {request.status === "pending" ? (
+                {canDeleteRequest(request.status) ? (
                   <Pressable
                     style={styles.deleteBtn}
-                    disabled={cancelMyRequest.isPending}
+                    disabled={deleteMyRequest.isPending}
                     onPress={async () => {
                       try {
-                        await cancelMyRequest.mutateAsync(request.id);
-                        showToast("Request deleted.", "success");
+                        await deleteMyRequest.mutateAsync(request.id);
+                        showToast(
+                          request.status === "pending"
+                            ? "Request revoked."
+                            : "Request history deleted.",
+                          "success",
+                        );
                       } catch (e: any) {
                         showToast(e?.message ?? "Could not delete request.", "error");
                       }
                     }}
                   >
-                    <AppText style={styles.deleteBtnText}>Delete Request</AppText>
+                    <AppText style={styles.deleteBtnText}>
+                      {request.status === "pending"
+                        ? "Revoke Request"
+                        : "Delete History"}
+                    </AppText>
                   </Pressable>
                 ) : null}
               </View>
@@ -227,28 +233,43 @@ export default function CareCircle() {
           <AppText weight="semibold" style={styles.sectionTitle}>
             Approved Patients
           </AppText>
-          {approvedPatients.length === 0 ? (
+          {linkedMembers.length === 0 ? (
             <AppText style={styles.emptyText}>
-              No approved patients available yet.
+              No approved care-circle members linked to your patients yet.
             </AppText>
           ) : (
-            approvedPatients.map((patient) => (
-              <Pressable
-                key={patient.id}
+            linkedMembers.map((member) => (
+              <View
+                key={`${member.patientId}-${member.memberUserId}`}
                 style={styles.approvedRow}
-                onPress={() =>
-                  router.push({
-                    pathname: "/(tabs)/(pages)/patient-profile/[patientId]",
-                    params: { patientId: patient.id },
-                  })
-                }
               >
-                <AppText style={styles.approvedName}>{patient.display_name}</AppText>
+                <AppText style={styles.approvedName}>{member.patientName}</AppText>
                 <AppText style={styles.approvedMeta}>
-                  Role: {patient.role === "caregiver" ? "Full Access" : "Read-only"}
+                  User: {member.memberUserId.slice(0, 8)}...
                 </AppText>
-                <AppText style={styles.approvedMeta}>Tap to view profile</AppText>
-              </Pressable>
+                <AppText style={styles.approvedMeta}>
+                  Access: {member.role === "caregiver" ? "Full Access" : "Read-only"}
+                </AppText>
+                <AppText style={styles.approvedMeta}>
+                  Linked: {new Date(member.createdAt).toLocaleString()}
+                </AppText>
+                <Pressable
+                  style={styles.deleteBtn}
+                  disabled={revokeApprovedAccess.isPending}
+                  onPress={async () => {
+                    try {
+                      await revokeApprovedAccess.mutateAsync({
+                        requestId: member.requestId,
+                      });
+                      showToast("Access removed.", "success");
+                    } catch (e: any) {
+                      showToast(e?.message ?? "Could not remove access.", "error");
+                    }
+                  }}
+                >
+                  <AppText style={styles.deleteBtnText}>Remove Access</AppText>
+                </Pressable>
+              </View>
             ))
           )}
         </Card>

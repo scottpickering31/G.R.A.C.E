@@ -426,12 +426,17 @@ export default function AddMedicationModal({
     >
       <Pressable style={styles.backdrop} onPress={close}>
         <Pressable
-          style={[styles.sheet, { paddingBottom: 16 + Math.max(insets.bottom, 8) }]}
+          style={[
+            styles.sheet,
+            { paddingBottom: 16 + Math.max(insets.bottom, 8) },
+          ]}
           onPress={() => {}}
         >
           <ScrollView
             keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 8) }}
+            contentContainerStyle={{
+              paddingBottom: Math.max(insets.bottom, 8),
+            }}
           >
             <View style={styles.header}>
               <AppText weight="bold" style={styles.title}>
@@ -467,7 +472,10 @@ export default function AddMedicationModal({
                 {searching ? (
                   <View style={styles.searchSkeletonWrap}>
                     {Array.from({ length: 4 }).map((_, index) => (
-                      <View key={`search-skeleton-${index}`} style={styles.searchSkeletonRow}>
+                      <View
+                        key={`search-skeleton-${index}`}
+                        style={styles.searchSkeletonRow}
+                      >
                         <SkeletonBlock width="68%" height={14} />
                         <View style={{ height: 6 }} />
                         <SkeletonBlock width="44%" height={12} />
@@ -969,15 +977,29 @@ export default function AddMedicationModal({
                 "expires_at",
                 "Set the medication expiry date from the packaging so you can replace it in time.",
               )}
-              <Pressable
-                style={styles.dateInputWrap}
-                onPress={() => setExpiresCalendarVisible(true)}
-              >
-                <Calendar size={16} color="rgba(31,45,61,0.6)" />
-                <AppText style={styles.dateInputText}>
-                  {expiresAtDate ? formatDateISO(expiresAtDate) : "Select expiry date"}
-                </AppText>
-              </Pressable>
+              <View style={styles.optionalDateRow}>
+                <Pressable
+                  style={[styles.dateInputWrap, styles.optionalDateInput]}
+                  onPress={() => setExpiresCalendarVisible(true)}
+                >
+                  <Calendar size={16} color="rgba(31,45,61,0.6)" />
+                  <AppText style={styles.dateInputText}>
+                    {expiresAtDate
+                      ? formatDateISO(expiresAtDate)
+                      : "Select expiry date"}
+                  </AppText>
+                </Pressable>
+                {expiresAtDate ? (
+                  <Pressable
+                    style={styles.clearDateButton}
+                    onPress={() => setExpiresAtDate(null)}
+                  >
+                    <AppText weight="semibold" style={styles.clearDateButtonText}>
+                      Clear
+                    </AppText>
+                  </Pressable>
+                ) : null}
+              </View>
             </View>
 
             <View style={styles.field}>
@@ -1298,6 +1320,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: theme.typography.fontSize.sm,
     color: theme.colors.text.secondary,
+    marginBottom: 10,
   },
   inputWrap: {
     marginTop: 12,
@@ -1466,8 +1489,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  optionalDateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  optionalDateInput: {
+    flex: 1,
+  },
   dateInputText: {
     color: theme.colors.text.primary,
+  },
+  clearDateButton: {
+    minHeight: 44,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: "rgba(194, 76, 102, 0.24)",
+    backgroundColor: "rgba(194, 76, 102, 0.08)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  clearDateButtonText: {
+    color: "#C24C66",
+    fontSize: theme.typography.fontSize.sm,
   },
   timePickerTrigger: {
     minHeight: 44,
