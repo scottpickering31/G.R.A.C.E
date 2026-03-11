@@ -4,7 +4,7 @@ import { GradientText } from "@/src/components/layout/LinearGradientText";
 import Screen from "@/src/components/layout/Screen";
 import { theme } from "@/src/theme";
 import { useRouter } from "expo-router";
-import { FileText, HeartPulse, ShieldCheck } from "lucide-react-native";
+import { CalendarDays, Package, Pill } from "lucide-react-native";
 import React from "react";
 import { Image, View } from "react-native";
 
@@ -17,19 +17,20 @@ export default function Welcome() {
 
   const valueProps = [
     {
-      label: "Track Emergencies in Seconds",
-      subtitle: "Quick logging, timers, and patterns over time.",
-      Icon: HeartPulse,
+      label: "Manage Medications Clearly",
+      subtitle: "Keep schedules, doses, and treatment details easy to follow.",
+      Icon: Pill,
     },
     {
-      label: "Build a Care Plan",
-      subtitle: "Rescue steps, triggers, meds, and notes when you need them.",
-      Icon: ShieldCheck,
+      label: "Stay Ahead of Appointments",
+      subtitle: "See upcoming visits and keep important dates in one place.",
+      Icon: CalendarDays,
     },
     {
-      label: "Share Clear Reports",
-      subtitle: "Export summaries for doctors, school, or caregivers.",
-      Icon: FileText,
+      label: "Watch Stock Before It Runs Low",
+      subtitle:
+        "Check medication stock levels so refills are less of a scramble.",
+      Icon: Package,
     },
   ];
 

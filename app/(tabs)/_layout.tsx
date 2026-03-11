@@ -1,11 +1,12 @@
 import BackToHomeButton from "@/components/buttons/BackToHomeButton";
 import { useOwnerPendingAccessRequests } from "@/src/api/access/hooks";
-import DashboardSkeleton from "@/src/components/loading/DashboardSkeleton";
 import { useAccessiblePatients } from "@/src/api/medications/hooks";
+import DashboardSkeleton from "@/src/components/loading/DashboardSkeleton";
 import { theme } from "@/src/theme";
 import { useAuthStore } from "@/state/auth.store";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, Tabs, usePathname, useRouter } from "expo-router";
+import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,15 +22,19 @@ export default function TabsLayout() {
     useAccessiblePatients(userId);
   const pendingCount = ownerPendingRequests?.length ?? 0;
 
+  useEffect(() => {
+    if (!hydrated || !session || patientsLoading) return;
+    if ((accessiblePatients?.length ?? 0) === 0) {
+      router.replace("/(auth)/post-login");
+    }
+  }, [hydrated, session, patientsLoading, accessiblePatients, router]);
+
   if (!hydrated) {
     return <DashboardSkeleton />;
   }
   if (!session) return <Redirect href="/(auth)/post-login" />;
-  if (patientsLoading && !accessiblePatients) {
-    return <DashboardSkeleton />;
-  }
-  if ((accessiblePatients?.length ?? 0) === 0) {
-    return <Redirect href="/(auth)/post-login" />;
+  if (!patientsLoading && (accessiblePatients?.length ?? 0) === 0) {
+    return null;
   }
 
   return (
@@ -158,6 +163,7 @@ export default function TabsLayout() {
         name="stock"
         options={{
           title: "Stock",
+          headerTitle: "Stock Management",
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons
               name={focused ? "cube" : "cube-outline"}

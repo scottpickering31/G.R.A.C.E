@@ -8,6 +8,7 @@ import Screen from "@/src/components/layout/Screen";
 import { theme } from "@/src/theme";
 import { useAuthStore } from "@/state/auth.store";
 import { useUIStore } from "@/state/ui.store";
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { Calendar, CircleCheck, User } from "lucide-react-native";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -61,6 +62,24 @@ function formatPatientCode(value: string) {
   return `PT-${normalized.slice(0, 4)}-${normalized.slice(4, 8)}-${normalized.slice(8, 12)}`;
 }
 
+function extractPatientCode(value: string) {
+  const upperValue = value.toUpperCase();
+  const formattedMatch = upperValue.match(
+    /PT[^A-Z0-9]*([A-Z0-9]{4})[^A-Z0-9]*([A-Z0-9]{4})[^A-Z0-9]*([A-Z0-9]{4})/,
+  );
+  if (formattedMatch) {
+    return `${formattedMatch[1]}${formattedMatch[2]}${formattedMatch[3]}`;
+  }
+
+  const rawMatch = upperValue.match(
+    /(?:^|[^A-Z0-9])([A-Z0-9]{12})(?:[^A-Z0-9]|$)/,
+  );
+  if (rawMatch) return rawMatch[1];
+
+  const normalized = normalizePatientCodeInput(upperValue);
+  return normalized.length === 12 ? normalized : "";
+}
+
 function getConnectCodeScrollX(activeIndex: number, viewportWidth: number) {
   if (viewportWidth <= 0) return 0;
 
@@ -75,6 +94,7 @@ function getConnectCodeScrollX(activeIndex: number, viewportWidth: number) {
   const targetX =
     CONNECT_CODE_LEADING_WIDTH +
     cellOffset -
+    CONNECT_CODE_CELL_SIZE -
     viewportWidth +
     CONNECT_CODE_SCROLL_PADDING;
 
@@ -215,6 +235,19 @@ export default function CreatePatientProfile() {
     } finally {
       hideLoading();
     }
+  };
+
+  const pasteConnectCodeFromClipboard = async () => {
+    const clipboardValue = await Clipboard.getStringAsync();
+    const pastedCode = extractPatientCode(clipboardValue ?? "");
+
+    if (!pastedCode) {
+      showToast("Clipboard does not contain a valid patient code.", "error");
+      return;
+    }
+
+    setConnectSecretCode(pastedCode);
+    showToast("Patient code pasted from clipboard.", "success");
   };
 
   return (
@@ -434,6 +467,14 @@ export default function CreatePatientProfile() {
               Type the 12-character code only. The PT prefix and dashes are
               added for you.
             </AppText>
+            <Pressable
+              style={styles.pasteCodeBtn}
+              onPress={pasteConnectCodeFromClipboard}
+            >
+              <AppText weight="semibold" style={styles.pasteCodeBtnText}>
+                Paste From Clipboard
+              </AppText>
+            </Pressable>
 
             <View style={styles.modalActionRow}>
               <Pressable
@@ -740,6 +781,20 @@ const styles = StyleSheet.create({
   codeHelperText: {
     marginTop: 8,
     color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
+  },
+  pasteCodeBtn: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.22)",
+    backgroundColor: "rgba(74,144,226,0.10)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  pasteCodeBtnText: {
+    color: theme.colors.brand.dark,
     fontSize: theme.typography.fontSize.xs,
   },
   modalActionRow: {

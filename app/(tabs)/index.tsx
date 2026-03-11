@@ -11,6 +11,7 @@ import {
 } from "@/src/api/medications/hooks";
 import AppText from "@/src/components/AppText";
 import CurrentTime from "@/src/components/calendar/CurrentTime";
+import DashboardSkeleton from "@/src/components/loading/DashboardSkeleton";
 import MedsDueModal, {
   MedsDueWindowHours,
   UpcomingMedication,
@@ -69,15 +70,29 @@ export default function Dashboard() {
   const medsWindowHours = useUIStore((s) => s.medicationsWindowHours);
   const setMedsWindowHours = useUIStore((s) => s.setMedicationsWindowHours);
   const userId = useAuthStore((s) => s.session?.user.id);
-  const { data: primaryPatientId, refetch: refetchPrimaryPatient } =
-    usePrimaryPatientId(userId);
-  const { data: upcomingMedsData, refetch: refetchUpcomingMeds } =
-    useUpcomingMedicationDoses(primaryPatientId ?? undefined, medsWindowHours);
-  const { data: appointmentsData, refetch: refetchAppointments } =
-    useAppointments(primaryPatientId ?? undefined);
-  const { data: medicationsData, refetch: refetchMedications } = useMedications(
+  const {
+    data: primaryPatientId,
+    isLoading: primaryPatientLoading,
+    refetch: refetchPrimaryPatient,
+  } = usePrimaryPatientId(userId);
+  const {
+    data: upcomingMedsData,
+    isLoading: upcomingMedsLoading,
+    refetch: refetchUpcomingMeds,
+  } = useUpcomingMedicationDoses(
     primaryPatientId ?? undefined,
+    medsWindowHours,
   );
+  const {
+    data: appointmentsData,
+    isLoading: appointmentsLoading,
+    refetch: refetchAppointments,
+  } = useAppointments(primaryPatientId ?? undefined);
+  const {
+    data: medicationsData,
+    isLoading: medicationsLoading,
+    refetch: refetchMedications,
+  } = useMedications(primaryPatientId ?? undefined);
   const sortedMeds: UpcomingMedication[] = upcomingMedsData ?? [];
   const upcomingAppointmentsCount = useMemo(() => {
     const now = Date.now();
@@ -110,6 +125,17 @@ export default function Dashboard() {
   const medsDueSubtitle = nextDue
     ? `${nextDue.name} - ${nextDue.dose}`
     : "No medications due";
+  const dashboardLoading =
+    primaryPatientLoading ||
+    !primaryPatientId ||
+    upcomingMedsLoading ||
+    appointmentsLoading ||
+    medicationsLoading;
+
+  if (dashboardLoading) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <SwipeableTabScreen activeRoute="/(tabs)">
       <Screen

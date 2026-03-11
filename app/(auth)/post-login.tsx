@@ -4,9 +4,8 @@ import {
 } from "@/src/api/onboarding/hooks";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
-import DashboardSkeleton from "@/src/components/loading/DashboardSkeleton";
-import { theme } from "@/src/theme";
 import { useAuthStore } from "@/src/state/auth.store";
+import { theme } from "@/src/theme";
 import { useRouter } from "expo-router";
 import { useEffect } from "react";
 import { View } from "react-native";
@@ -31,6 +30,13 @@ export default function PostLoginGate() {
     error: patientErrorObj,
     refetch: refetchPatient,
   } = useHasPatientAccess(userId);
+  const checksResolved =
+    hydrated &&
+    !!session &&
+    !onboardingLoading &&
+    !patientLoading &&
+    !onboardingError &&
+    !patientError;
 
   useEffect(() => {
     if (!hydrated) return;
@@ -40,7 +46,8 @@ export default function PostLoginGate() {
       return;
     }
 
-    if (onboardingLoading || patientLoading || onboardingError || patientError) return;
+    if (onboardingLoading || patientLoading || onboardingError || patientError)
+      return;
 
     if (!hasPatient) {
       router.replace("/(onboarding)/create-patient-profile");
@@ -65,9 +72,9 @@ export default function PostLoginGate() {
     router,
   ]);
 
-  if (!hydrated || onboardingLoading || patientLoading) {
-    return <DashboardSkeleton />;
-  }
+  // if (!hydrated || onboardingLoading || patientLoading) {
+  //   return <DashboardSkeleton />;
+  // }
 
   if (onboardingError || patientError) {
     const message = onboardingErrorObj?.message ?? patientErrorObj?.message;
@@ -103,5 +110,7 @@ export default function PostLoginGate() {
     );
   }
 
-  return <DashboardSkeleton />;
+  if (checksResolved) {
+    return null;
+  }
 }

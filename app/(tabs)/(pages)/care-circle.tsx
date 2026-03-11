@@ -10,14 +10,88 @@ import {
 import AppText from "@/src/components/AppText";
 import Screen from "@/src/components/layout/Screen";
 import { useAuthStore } from "@/src/state/auth.store";
-import { useUIStore } from "@/state/ui.store";
 import { theme } from "@/src/theme";
+import { useUIStore } from "@/state/ui.store";
+import * as Clipboard from "expo-clipboard";
 import { ShieldCheck, UsersRound } from "lucide-react-native";
-import { useMemo, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from "react-native";
+import {
+  CodeField,
+  Cursor,
+  useBlurOnFulfill,
+} from "react-native-confirmation-code-field";
 
-function statusLabel(status: "pending" | "approved" | "rejected" | "cancelled") {
+const CONNECT_CODE_CELL_COUNT = 12;
+const CONNECT_CODE_CELL_SIZE = 30;
+const CONNECT_CODE_CELL_GAP = 6;
+const CONNECT_CODE_GROUP_GAP = 8;
+const CONNECT_CODE_LEADING_WIDTH = 64;
+const CONNECT_CODE_SCROLL_PADDING = 48;
+
+function statusLabel(
+  status: "pending" | "approved" | "rejected" | "cancelled",
+) {
   return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function normalizePatientCodeInput(value: string) {
+  return value
+    .toUpperCase()
+    .replace(/^PT-?/, "")
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 12);
+}
+
+function formatPatientCode(value: string) {
+  const normalized = normalizePatientCodeInput(value);
+  if (normalized.length !== 12) return normalized;
+  return `PT-${normalized.slice(0, 4)}-${normalized.slice(4, 8)}-${normalized.slice(8, 12)}`;
+}
+
+function extractPatientCode(value: string) {
+  const upperValue = value.toUpperCase();
+  const formattedMatch = upperValue.match(
+    /PT[^A-Z0-9]*([A-Z0-9]{4})[^A-Z0-9]*([A-Z0-9]{4})[^A-Z0-9]*([A-Z0-9]{4})/,
+  );
+  if (formattedMatch) {
+    return `${formattedMatch[1]}${formattedMatch[2]}${formattedMatch[3]}`;
+  }
+
+  const rawMatch = upperValue.match(
+    /(?:^|[^A-Z0-9])([A-Z0-9]{12})(?:[^A-Z0-9]|$)/,
+  );
+  if (rawMatch) return rawMatch[1];
+
+  const normalized = normalizePatientCodeInput(upperValue);
+  return normalized.length === 12 ? normalized : "";
+}
+
+function getConnectCodeScrollX(activeIndex: number, viewportWidth: number) {
+  if (viewportWidth <= 0) return 0;
+
+  const clampedIndex = Math.max(
+    0,
+    Math.min(activeIndex, CONNECT_CODE_CELL_COUNT - 1),
+  );
+  const completedGroupBreaks = Math.floor(clampedIndex / 4);
+  const cellOffset =
+    clampedIndex * (CONNECT_CODE_CELL_SIZE + CONNECT_CODE_CELL_GAP) +
+    completedGroupBreaks * CONNECT_CODE_GROUP_GAP;
+  const targetX =
+    CONNECT_CODE_LEADING_WIDTH +
+    cellOffset +
+    CONNECT_CODE_CELL_SIZE -
+    viewportWidth +
+    CONNECT_CODE_SCROLL_PADDING;
+
+  return Math.max(0, targetX);
 }
 
 export default function CareCircle() {
@@ -28,12 +102,18 @@ export default function CareCircle() {
   const [requestedRole, setRequestedRole] = useState<"read_only" | "caregiver">(
     "read_only",
   );
+  const [connectCodeViewportWidth, setConnectCodeViewportWidth] = useState(0);
+  const connectCodeScrollRef = useRef<ScrollView | null>(null);
   const requestReadOnlyAccess = useRequestReadOnlyAccess(userId);
   const deleteMyRequest = useDeleteMyAccessRequest(userId);
   const revokeApprovedAccess = useRevokeOwnerApprovedAccess(userId);
   const { data: myRequests, refetch } = useMyAccessRequests(userId);
   const { data: ownerApprovedAccess, refetch: refetchOwnerApprovedAccess } =
     useOwnerApprovedAccess(userId);
+  const connectCodeRef = useBlurOnFulfill({
+    value: secretCode,
+    cellCount: CONNECT_CODE_CELL_COUNT,
+  });
 
   const pendingCount = useMemo(
     () => (myRequests ?? []).filter((r) => r.status === "pending").length,
@@ -44,8 +124,34 @@ export default function CareCircle() {
     () => (myRequests ?? []).filter((r) => r.status !== "approved"),
     [myRequests],
   );
-  const canDeleteRequest = (status: typeof currentRequests[number]["status"]) =>
-    status === "pending" || status === "cancelled" || status === "rejected";
+  const canDeleteRequest = (
+    status: (typeof currentRequests)[number]["status"],
+  ) => status === "pending" || status === "cancelled" || status === "rejected";
+
+  useEffect(() => {
+    const activeIndex = Math.max(
+      0,
+      Math.min(secretCode.length, CONNECT_CODE_CELL_COUNT - 1),
+    );
+    const nextX = getConnectCodeScrollX(activeIndex, connectCodeViewportWidth);
+    const timer = setTimeout(() => {
+      connectCodeScrollRef.current?.scrollTo({ x: nextX, animated: true });
+    }, 30);
+    return () => clearTimeout(timer);
+  }, [secretCode, connectCodeViewportWidth]);
+
+  const pasteSecretCodeFromClipboard = async () => {
+    const clipboardValue = await Clipboard.getStringAsync();
+    const pastedCode = extractPatientCode(clipboardValue ?? "");
+
+    if (!pastedCode) {
+      showToast("Clipboard does not contain a valid patient code.", "error");
+      return;
+    }
+
+    setSecretCode(pastedCode);
+    showToast("Patient code pasted from clipboard.", "success");
+  };
 
   return (
     <Screen
@@ -67,7 +173,8 @@ export default function CareCircle() {
             Care Circle Access
           </AppText>
           <AppText style={styles.heroSubtitle}>
-            Request read-only access to a patient profile using their secret code.
+            Request read-only or full access to a patient profile using their
+            secret code or paste from clipboard.
           </AppText>
         </Card>
 
@@ -78,17 +185,73 @@ export default function CareCircle() {
             </AppText>
             <View style={styles.pendingChip}>
               <ShieldCheck size={12} color="#1F6C45" />
-              <AppText style={styles.pendingChipText}>{pendingCount} pending</AppText>
+              <AppText style={styles.pendingChipText}>
+                {pendingCount} pending
+              </AppText>
             </View>
           </View>
-          <TextInput
-            value={secretCode}
-            onChangeText={(value) => setSecretCode(value.toUpperCase())}
-            autoCapitalize="characters"
-            placeholder="PT-XXXX-XXXX-XXXX"
-            placeholderTextColor="rgba(31,45,61,0.45)"
-            style={styles.input}
-          />
+          <View style={styles.codeInputShell}>
+            <ScrollView
+              ref={connectCodeScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="always"
+              contentContainerStyle={styles.codeInputRow}
+              onLayout={(event) =>
+                setConnectCodeViewportWidth(event.nativeEvent.layout.width)
+              }
+            >
+              <View style={styles.codePrefixBadge}>
+                <AppText weight="semibold" style={styles.codePrefixText}>
+                  PT
+                </AppText>
+              </View>
+              <AppText style={styles.codeSeparator}>-</AppText>
+              <CodeField
+                ref={connectCodeRef}
+                value={secretCode}
+                onChangeText={(value) =>
+                  setSecretCode(normalizePatientCodeInput(value))
+                }
+                cellCount={CONNECT_CODE_CELL_COUNT}
+                rootStyle={styles.codeFieldRoot}
+                keyboardType="ascii-capable"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                textContentType="oneTimeCode"
+                autoComplete="one-time-code"
+                renderCell={({ index, symbol, isFocused }) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.codeCell,
+                      isFocused && styles.codeCellActive,
+                      index < CONNECT_CODE_CELL_COUNT - 1 &&
+                      (index + 1) % 4 === 0
+                        ? styles.codeCellGroupGap
+                        : null,
+                    ]}
+                  >
+                    <AppText style={styles.codeCellText}>
+                      {symbol || (isFocused ? <Cursor /> : "")}
+                    </AppText>
+                  </View>
+                )}
+              />
+            </ScrollView>
+          </View>
+          <AppText style={styles.codeHelperText}>
+            Type the 12-character secret code only. The PT prefix and dashes are
+            added for you.
+          </AppText>
+          <Pressable
+            style={styles.pasteCodeBtn}
+            onPress={pasteSecretCodeFromClipboard}
+          >
+            <AppText weight="semibold" style={styles.pasteCodeBtnText}>
+              Paste From Clipboard
+            </AppText>
+          </Pressable>
           <TextInput
             value={note}
             onChangeText={setNote}
@@ -135,13 +298,22 @@ export default function CareCircle() {
             style={styles.requestBtn}
             disabled={requestReadOnlyAccess.isPending}
             onPress={async () => {
-              if (!secretCode.trim()) {
+              const normalizedCode = normalizePatientCodeInput(secretCode);
+              if (!normalizedCode) {
                 showToast("Please enter a patient secret code.", "error");
                 return;
               }
+              if (normalizedCode.length !== 12) {
+                showToast(
+                  "Enter all 12 letters and numbers from the patient code.",
+                  "error",
+                );
+                return;
+              }
+
               try {
                 await requestReadOnlyAccess.mutateAsync({
-                  code: secretCode,
+                  code: formatPatientCode(normalizedCode),
                   requestedRole,
                   note: note.trim() || undefined,
                 });
@@ -179,7 +351,9 @@ export default function CareCircle() {
                 </AppText>
                 <AppText style={styles.requestMetaText}>
                   Requested Access:{" "}
-                  {request.requestedRole === "caregiver" ? "Full Access" : "Read-only"}
+                  {request.requestedRole === "caregiver"
+                    ? "Full Access"
+                    : "Read-only"}
                 </AppText>
                 <AppText style={styles.requestMetaText}>
                   {new Date(request.createdAt).toLocaleString()}
@@ -214,7 +388,10 @@ export default function CareCircle() {
                           "success",
                         );
                       } catch (e: any) {
-                        showToast(e?.message ?? "Could not delete request.", "error");
+                        showToast(
+                          e?.message ?? "Could not delete request.",
+                          "error",
+                        );
                       }
                     }}
                   >
@@ -244,12 +421,15 @@ export default function CareCircle() {
                 key={`${member.patientId}-${member.memberUserId}`}
                 style={styles.approvedRow}
               >
-                <AppText style={styles.approvedName}>{member.patientName}</AppText>
+                <AppText style={styles.approvedName}>
+                  {member.patientName}
+                </AppText>
                 <AppText style={styles.approvedMeta}>
                   User: {member.memberUserId.slice(0, 8)}...
                 </AppText>
                 <AppText style={styles.approvedMeta}>
-                  Access: {member.role === "caregiver" ? "Full Access" : "Read-only"}
+                  Access:{" "}
+                  {member.role === "caregiver" ? "Full Access" : "Read-only"}
                 </AppText>
                 <AppText style={styles.approvedMeta}>
                   Linked: {new Date(member.createdAt).toLocaleString()}
@@ -264,7 +444,10 @@ export default function CareCircle() {
                       });
                       showToast("Access removed.", "success");
                     } catch (e: any) {
-                      showToast(e?.message ?? "Could not remove access.", "error");
+                      showToast(
+                        e?.message ?? "Could not remove access.",
+                        "error",
+                      );
                     }
                   }}
                 >
@@ -331,6 +514,87 @@ const styles = StyleSheet.create({
   noteInput: {
     minHeight: 60,
     textAlignVertical: "top",
+  },
+  codeInputShell: {
+    marginTop: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(31,45,61,0.16)",
+    backgroundColor: "rgba(255,255,255,0.98)",
+    padding: 12,
+    gap: 10,
+  },
+  codeInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingRight: 4,
+  },
+  codePrefixBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: "rgba(74,144,226,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.24)",
+  },
+  codePrefixText: {
+    color: theme.colors.brand.dark,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  codeFieldRoot: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  codeCell: {
+    width: 30,
+    height: 30,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "rgba(143, 162, 180, 0.35)",
+    backgroundColor: "rgba(248,251,255,0.96)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  codeCellActive: {
+    borderColor: "rgba(74,144,226,0.55)",
+    backgroundColor: "rgba(74,144,226,0.16)",
+  },
+  codeCellGroupGap: {
+    marginRight: 8,
+  },
+  codeCellText: {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.md,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  codeSeparator: {
+    color: "rgba(31,45,61,0.55)",
+    fontSize: theme.typography.fontSize.lg,
+    fontWeight: "700",
+  },
+  codeHelperText: {
+    marginTop: 8,
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.xs,
+  },
+  pasteCodeBtn: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.22)",
+    backgroundColor: "rgba(74,144,226,0.10)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  pasteCodeBtnText: {
+    color: theme.colors.brand.dark,
+    fontSize: theme.typography.fontSize.xs,
   },
   roleChipsRow: {
     flexDirection: "row",
