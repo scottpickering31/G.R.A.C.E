@@ -11,6 +11,7 @@ export type AccessRequestItem = {
   patientId: string;
   requesterUserId: string;
   requestedRole: "read_only" | "caregiver";
+  requestedCode?: string;
   status: AccessRequestStatus;
   createdAt: string;
   note: string;
@@ -39,6 +40,25 @@ function isMissingActivePatientColumnError(error: any) {
     return true;
   }
   return false;
+}
+
+function isPatientMemberInsertPolicyError(error: any) {
+  if (!error) return false;
+  if (error.code === "42501") return true;
+  return (
+    typeof error.message === "string" &&
+    error.message.includes("row-level security policy") &&
+    error.message.includes("patient_members")
+  );
+}
+
+async function getPatientMembershipCountForUser(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("patient_members")
+    .select("patient_id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  if (error) throw error;
+  return count ?? 0;
 }
 
 function randomChunk(length = 4) {
@@ -187,6 +207,11 @@ export async function requestAccessByCode(
     }
   }
 
+  const membershipCount = await getPatientMembershipCountForUser(userId);
+  if (membershipCount >= 2) {
+    throw new Error("Maximum of 2 patients allowed per user.");
+  }
+
   const nowIso = new Date().toISOString();
   const trimmedNote = note?.trim() || null;
   const { data: existingRequests, error: existingRequestsError } =
@@ -255,7 +280,7 @@ export async function getMyAccessRequests(
   const { data, error } = await supabase
     .from("patient_access_requests" as any)
     .select(
-      "id,patient_id,requester_user_id,requested_role,status,created_at,note",
+      "id,patient_id,requester_user_id,requested_role,requested_code,status,created_at,note",
     )
     .eq("requester_user_id", userId)
     .order("created_at", { ascending: false })
@@ -266,6 +291,7 @@ export async function getMyAccessRequests(
     patientId: row.patient_id,
     requesterUserId: row.requester_user_id,
     requestedRole: row.requested_role,
+    requestedCode: row.requested_code ?? undefined,
     status: row.status,
     createdAt: row.created_at,
     note: row.note ?? "",
@@ -388,22 +414,28 @@ export async function resolveAccessRequest(
   ownerUserId: string,
   approve: boolean,
 ): Promise<void> {
-  const status: AccessRequestStatus = approve ? "approved" : "rejected";
   const nowIso = new Date().toISOString();
+  if (!approve) {
+    const { error: updateError } = await supabase
+      .from("patient_access_requests" as any)
+      .update({
+        status: "rejected",
+        resolved_by: ownerUserId,
+        resolved_at: nowIso,
+        updated_at: nowIso,
+      })
+      .eq("id", request.id)
+      .eq("status", "pending");
+    if (updateError) throw updateError;
+    return;
+  }
 
-  const { error: updateError } = await supabase
-    .from("patient_access_requests" as any)
-    .update({
-      status,
-      resolved_by: ownerUserId,
-      resolved_at: nowIso,
-      updated_at: nowIso,
-    })
-    .eq("id", request.id)
-    .eq("status", "pending");
-  if (updateError) throw updateError;
-
-  if (!approve) return;
+  const requesterMembershipCount = await getPatientMembershipCountForUser(
+    request.requesterUserId,
+  );
+  if (requesterMembershipCount >= 2) {
+    throw new Error("This user already has the maximum of 2 patients.");
+  }
 
   const { error: memberError } = await supabase.from("patient_members").insert({
     patient_id: request.patientId,
@@ -411,7 +443,29 @@ export async function resolveAccessRequest(
     role: request.requestedRole,
   });
   // Already a member -> treat as success
-  if (memberError && memberError.code !== "23505") throw memberError;
+  if (memberError && memberError.code !== "23505") {
+    if (
+      request.requestedRole === "caregiver" &&
+      isPatientMemberInsertPolicyError(memberError)
+    ) {
+      throw new Error(
+        "Database policy does not yet allow approving full access. Run the latest patient members schema update and retry.",
+      );
+    }
+    throw memberError;
+  }
+
+  const { error: updateError } = await supabase
+    .from("patient_access_requests" as any)
+    .update({
+      status: "approved",
+      resolved_by: ownerUserId,
+      resolved_at: nowIso,
+      updated_at: nowIso,
+    })
+    .eq("id", request.id)
+    .eq("status", "pending");
+  if (updateError) throw updateError;
 }
 
 export async function deleteMyAccessRequest(
@@ -548,6 +602,8 @@ export async function connectReadOnlyAccessByCode(
     throw new Error("Code is invalid or inactive.");
   }
 
+  const membershipCount = await getPatientMembershipCountForUser(userId);
+
   const { data: existingMembership, error: existingError } = await supabase
     .from("patient_members")
     .select("patient_id")
@@ -558,6 +614,10 @@ export async function connectReadOnlyAccessByCode(
   if (existingError) throw existingError;
 
   if (!existingMembership) {
+    if (membershipCount >= 2) {
+      throw new Error("Maximum of 2 patients allowed per user.");
+    }
+
     const { error: insertError } = await supabase
       .from("patient_members")
       .insert({

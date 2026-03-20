@@ -43,9 +43,7 @@ function formatISODate(d: Date) {
 }
 
 function getDobDefaultDate() {
-  const d = new Date();
-  d.setFullYear(d.getFullYear() - 20);
-  return d;
+  return new Date();
 }
 
 export default function PatientProfiles() {
@@ -134,8 +132,9 @@ export default function PatientProfiles() {
             </View>
           ) : (
             accessiblePatients.map((patient) => {
-              const isActive =
-                patient.id === activePatientId || patient.isActive;
+              const isActive = activePatientId
+                ? patient.id === activePatientId
+                : patient.isActive;
               return (
                 <Pressable
                   key={patient.id}

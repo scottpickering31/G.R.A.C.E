@@ -339,17 +339,22 @@ export default function PatientProfileDetailsPage() {
                       style: "destructive",
                       onPress: async () => {
                         try {
-                          await deletePatientProfileMutation.mutateAsync({
-                            userId,
-                            patientId: data.id,
-                          });
+                          const remainingPatientCount =
+                            await deletePatientProfileMutation.mutateAsync({
+                              userId,
+                              patientId: data.id,
+                            });
                           showToast(
                             isOwner
                               ? "Patient profile deleted."
                               : "Linked profile removed.",
                             "success",
                           );
-                          router.replace("/(tabs)/(pages)/patient-profiles");
+                          router.replace(
+                            remainingPatientCount === 0
+                              ? "/(auth)/post-login"
+                              : "/(tabs)/(pages)/patient-profiles",
+                          );
                         } catch (e: any) {
                           showToast(
                             e?.message ??
@@ -432,14 +437,19 @@ export default function PatientProfileDetailsPage() {
                       onPress={async () => {
                         if (!data || !userId || !deletePhraseMatches) return;
                         try {
-                          await deletePatientProfileMutation.mutateAsync({
-                            userId,
-                            patientId: data.id,
-                          });
+                          const remainingPatientCount =
+                            await deletePatientProfileMutation.mutateAsync({
+                              userId,
+                              patientId: data.id,
+                            });
                           setShowDeleteOwnerModal(false);
                           setDeletePhrase("");
                           showToast("Patient profile deleted.", "success");
-                          router.replace("/(tabs)/(pages)/patient-profiles");
+                          router.replace(
+                            remainingPatientCount === 0
+                              ? "/(auth)/post-login"
+                              : "/(tabs)/(pages)/patient-profiles",
+                          );
                         } catch (e: any) {
                           showToast(
                             e?.message ?? "Could not delete this patient profile.",

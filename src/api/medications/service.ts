@@ -375,7 +375,7 @@ export async function setActivePatient({
 export async function deletePatientProfileForUser({
   userId,
   patientId,
-}: DeletePatientProfileInput): Promise<void> {
+}: DeletePatientProfileInput): Promise<number> {
   const { data: membership, error: membershipError } = await supabase
     .from("patient_members")
     .select("role")
@@ -440,6 +440,9 @@ export async function deletePatientProfileForUser({
   if (profileError && !isMissingActivePatientColumnError(profileError)) {
     throw profileError;
   }
+
+  const remainingMemberships = await getEffectivePatientMemberships(userId);
+  return remainingMemberships.length;
 }
 
 export async function createPatientProfileForUser({

@@ -1,12 +1,12 @@
 import BackToHomeButton from "@/components/buttons/BackToHomeButton";
 import { useOwnerPendingAccessRequests } from "@/src/api/access/hooks";
 import { useAccessiblePatients } from "@/src/api/medications/hooks";
+import { useHasPatientAccess } from "@/src/api/onboarding/hooks";
 import DashboardSkeleton from "@/src/components/loading/DashboardSkeleton";
 import { theme } from "@/src/theme";
 import { useAuthStore } from "@/state/auth.store";
 import { Ionicons } from "@expo/vector-icons";
 import { Redirect, Tabs, usePathname, useRouter } from "expo-router";
-import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -17,24 +17,22 @@ export default function TabsLayout() {
   const session = useAuthStore((s) => s.session);
   const hydrated = useAuthStore((s) => s.hydrated);
   const userId = session?.user.id;
+  const { data: hasPatientAccess, isLoading: patientAccessLoading } =
+    useHasPatientAccess(userId);
   const { data: ownerPendingRequests } = useOwnerPendingAccessRequests(userId);
   const { data: accessiblePatients, isLoading: patientsLoading } =
     useAccessiblePatients(userId);
   const pendingCount = ownerPendingRequests?.length ?? 0;
 
-  useEffect(() => {
-    if (!hydrated || !session || patientsLoading) return;
-    if ((accessiblePatients?.length ?? 0) === 0) {
-      router.replace("/(auth)/post-login");
-    }
-  }, [hydrated, session, patientsLoading, accessiblePatients, router]);
-
-  if (!hydrated) {
+  if (!hydrated || patientAccessLoading) {
     return <DashboardSkeleton />;
   }
   if (!session) return <Redirect href="/(auth)/post-login" />;
-  if (!patientsLoading && (accessiblePatients?.length ?? 0) === 0) {
-    return null;
+  if (hasPatientAccess === false) {
+    return <Redirect href="/(auth)/post-login" />;
+  }
+  if (patientsLoading || (accessiblePatients?.length ?? 0) === 0) {
+    return <DashboardSkeleton />;
   }
 
   return (

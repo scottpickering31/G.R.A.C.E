@@ -1,5 +1,7 @@
 import { supabase } from "@/services/supabase";
-import { useRequestReadOnlyAccess } from "@/src/api/access/hooks";
+import { useMyAccessRequests, useRequestReadOnlyAccess } from "@/src/api/access/hooks";
+import { useAccessiblePatients } from "@/src/api/medications/hooks";
+import { useIsOnboardingCompleted } from "@/src/api/onboarding/hooks";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
 import MonthCalendarModal from "@/src/components/calendar/MonthCalendarModal";
@@ -115,8 +117,12 @@ export default function CreatePatientProfile() {
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [connectSecretCode, setConnectSecretCode] = useState("");
   const [connectCodeViewportWidth, setConnectCodeViewportWidth] = useState(0);
+  const [requestedCodePreview, setRequestedCodePreview] = useState<string | null>(null);
   const connectCodeScrollRef = useRef<ScrollView | null>(null);
   const requestAccess = useRequestReadOnlyAccess(userId);
+  const { data: myAccessRequests } = useMyAccessRequests(userId);
+  const { data: accessiblePatients } = useAccessiblePatients(userId);
+  const { data: onboardingCompleted } = useIsOnboardingCompleted(userId);
   const connectCodeRef = useBlurOnFulfill({
     value: connectSecretCode,
     cellCount: CONNECT_CODE_CELL_COUNT,
@@ -126,6 +132,34 @@ export default function CreatePatientProfile() {
     () => name.trim().length > 0 && !!userId && !saving,
     [name, userId, saving],
   );
+  const linkedAccessRequest = useMemo(() => {
+    const requests = myAccessRequests ?? [];
+    return (
+      requests.find((request) => request.status === "approved") ??
+      requests.find((request) => request.status === "pending") ??
+      null
+    );
+  }, [myAccessRequests]);
+  const linkedPatient = useMemo(
+    () =>
+      accessiblePatients?.find(
+        (patient) => patient.id === linkedAccessRequest?.patientId,
+      ) ?? null,
+    [accessiblePatients, linkedAccessRequest?.patientId],
+  );
+  const linkedRequestCode =
+    linkedAccessRequest?.requestedCode ?? requestedCodePreview;
+  const isLinkedProfileApproved = linkedAccessRequest?.status === "approved";
+  const isLinkedProfilePending = linkedAccessRequest?.status === "pending";
+  const showLinkedAccessState =
+    isLinkedProfilePending ||
+    (isLinkedProfileApproved && !!linkedPatient) ||
+    (!!requestedCodePreview && !requestAccess.isPending);
+  const linkedProfileName = linkedPatient?.display_name ?? "linked profile";
+  const continueLabel =
+    onboardingCompleted === false
+      ? `Continue setup for ${linkedProfileName}`
+      : `Continue with ${linkedProfileName}`;
 
   useEffect(() => {
     if (!showConnectModal) return;
@@ -148,6 +182,16 @@ export default function CreatePatientProfile() {
     }, 30);
     return () => clearTimeout(timer);
   }, [connectSecretCode, connectCodeViewportWidth, showConnectModal]);
+
+  useEffect(() => {
+    if (linkedAccessRequest?.requestedCode) {
+      setRequestedCodePreview(null);
+      return;
+    }
+    if (myAccessRequests && !linkedAccessRequest) {
+      setRequestedCodePreview(null);
+    }
+  }, [linkedAccessRequest, myAccessRequests]);
 
   const createOwnedPatient = async () => {
     if (!userId) {
@@ -193,7 +237,7 @@ export default function CreatePatientProfile() {
       if (memberError && memberError.code !== "23505") throw memberError;
 
       showToast("Patient profile created.", "success");
-      router.push("/(onboarding)/permissions");
+      router.replace("/(auth)/post-login");
     } catch (e: any) {
       showToast(e?.message ?? "Could not create patient profile.", "error");
     } finally {
@@ -226,15 +270,19 @@ export default function CreatePatientProfile() {
     try {
       showLoading("Sending access request...");
       await requestAccess.mutateAsync({ code, requestedRole: "read_only" });
+      setRequestedCodePreview(code);
       showToast("Access request sent. Awaiting owner approval.", "success");
       setShowConnectModal(false);
       setConnectSecretCode("");
-      router.replace("/(auth)/post-login");
     } catch (e: any) {
       showToast(e?.message ?? "Could not send access request.", "error");
     } finally {
       hideLoading();
     }
+  };
+
+  const continueWithLinkedProfile = () => {
+    router.replace("/(auth)/post-login");
   };
 
   const pasteConnectCodeFromClipboard = async () => {
@@ -271,101 +319,153 @@ export default function CreatePatientProfile() {
           </AppText>
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.profileRow}>
-            <View style={styles.avatar}>
-              <User size={22} color="#4A90E2" />
+        {showLinkedAccessState ? (
+          <View style={styles.waitingCard}>
+            <View style={styles.profileRow}>
+              <View style={styles.avatar}>
+                <User size={22} color="#4A90E2" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <AppText weight="semibold" style={styles.sectionTitle}>
+                  {isLinkedProfileApproved
+                    ? "Access approved"
+                    : "Waiting for approval"}
+                </AppText>
+                <AppText style={styles.sectionHint}>
+                  {isLinkedProfileApproved
+                    ? `${linkedProfileName} is now available on your account.`
+                    : "The profile owner needs to approve your request before you can continue."}
+                </AppText>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <AppText weight="semibold" style={styles.sectionTitle}>
-                Primary patient details
-              </AppText>
-              <AppText style={styles.sectionHint}>
-                This profile is linked to your account as owner.
+
+            <View style={styles.waitingStatusPill}>
+              <AppText weight="semibold" style={styles.waitingStatusText}>
+                {isLinkedProfileApproved ? "Approved" : "Pending"}
               </AppText>
             </View>
-          </View>
 
-          <Field
-            label="Patient name *"
-            placeholder="e.g. Katie Smith"
-            value={name}
-            onChangeText={setName}
-          />
-
-          <Field
-            label="Date of birth (optional)"
-            placeholder="Select from calendar"
-            value={dobDate ? formatISODate(dobDate) : ""}
-            rightIcon={<Calendar size={18} color="rgba(31,45,61,0.55)" />}
-            onPress={() => setCalendarVisible(true)}
-          />
-
-          <AppText weight="semibold" style={styles.fieldLabel}>
-            Sex (optional)
-          </AppText>
-          <View style={styles.chipsRow}>
-            {(
-              [
-                ["female", "Female"],
-                ["male", "Male"],
-                ["other", "Other"],
-                ["prefer_not_to_say", "Prefer not to say"],
-              ] as [SexOption, string][]
-            ).map(([value, label]) => {
-              const active = sex === value;
-              return (
-                <Pressable
-                  key={value}
-                  onPress={() => setSex(value)}
-                  style={[styles.chip, active && styles.chipActive]}
-                >
-                  <AppText
-                    style={[styles.chipText, active && styles.chipTextActive]}
-                  >
-                    {label}
-                  </AppText>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.ctaBlock}>
-          <PillButton
-            label={
-              saving
-                ? "Creating..."
-                : canContinue
-                  ? "Create & Continue"
-                  : "Enter a name to continue"
-            }
-            onPress={createOwnedPatient}
-            disabled={!canContinue}
-            gradientColors={["#27D6C5", "#7C6CFF"]}
-            borderActive={false}
-            textStyle={styles.primaryCtaText}
-            textContainerStyle={{ alignItems: "center" }}
-            style={styles.primaryCta}
-          />
-
-          <PillButton
-            label="Connect to an existing patient profile"
-            onPress={() => setShowConnectModal(true)}
-            borderActive={true}
-            elevationActive={false}
-            textStyle={styles.secondaryCtaText}
-            textContainerStyle={{ alignItems: "center" }}
-            style={styles.secondaryCta}
-          />
-
-          <View style={styles.trustRow}>
-            <CircleCheck size={16} color="rgba(31,45,61,0.55)" />
-            <AppText style={styles.trustText}>
-              You can update patient details later from Profiles.
+            <AppText style={styles.waitingBodyText}>
+              {isLinkedProfileApproved
+                ? `You can continue once you're ready${linkedRequestCode ? ` for code ${linkedRequestCode}` : ""}.`
+                : `Waiting for the owner of code ${linkedRequestCode ?? "PT-XXXX-XXXX-XXXX"} to accept your request.`}
             </AppText>
+
+            {isLinkedProfileApproved ? (
+              <PillButton
+                label={continueLabel}
+                onPress={continueWithLinkedProfile}
+                gradientColors={["#27D6C5", "#7C6CFF"]}
+                borderActive={false}
+                textStyle={styles.primaryCtaText}
+                textContainerStyle={{ alignItems: "center" }}
+                style={styles.primaryCta}
+              />
+            ) : (
+              <AppText style={styles.waitingHintText}>
+                This page checks your request status automatically.
+              </AppText>
+            )}
           </View>
-        </View>
+        ) : (
+          <>
+            <View style={styles.card}>
+              <View style={styles.profileRow}>
+                <View style={styles.avatar}>
+                  <User size={22} color="#4A90E2" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <AppText weight="semibold" style={styles.sectionTitle}>
+                    Primary patient details
+                  </AppText>
+                  <AppText style={styles.sectionHint}>
+                    This profile is linked to your account as owner.
+                  </AppText>
+                </View>
+              </View>
+
+              <Field
+                label="Patient name *"
+                placeholder="e.g. Katie Smith"
+                value={name}
+                onChangeText={setName}
+              />
+
+              <Field
+                label="Date of birth (optional)"
+                placeholder="Select from calendar"
+                value={dobDate ? formatISODate(dobDate) : ""}
+                rightIcon={<Calendar size={18} color="rgba(31,45,61,0.55)" />}
+                onPress={() => setCalendarVisible(true)}
+              />
+
+              <AppText weight="semibold" style={styles.fieldLabel}>
+                Sex (optional)
+              </AppText>
+              <View style={styles.chipsRow}>
+                {(
+                  [
+                    ["female", "Female"],
+                    ["male", "Male"],
+                    ["other", "Other"],
+                    ["prefer_not_to_say", "Prefer not to say"],
+                  ] as [SexOption, string][]
+                ).map(([value, label]) => {
+                  const active = sex === value;
+                  return (
+                    <Pressable
+                      key={value}
+                      onPress={() => setSex(value)}
+                      style={[styles.chip, active && styles.chipActive]}
+                    >
+                      <AppText
+                        style={[styles.chipText, active && styles.chipTextActive]}
+                      >
+                        {label}
+                      </AppText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={styles.ctaBlock}>
+              <PillButton
+                label={
+                  saving
+                    ? "Creating..."
+                    : canContinue
+                      ? "Create & Continue"
+                      : "Enter a name to continue"
+                }
+                onPress={createOwnedPatient}
+                disabled={!canContinue}
+                gradientColors={["#27D6C5", "#7C6CFF"]}
+                borderActive={false}
+                textStyle={styles.primaryCtaText}
+                textContainerStyle={{ alignItems: "center" }}
+                style={styles.primaryCta}
+              />
+
+              <PillButton
+                label="Connect to an existing patient profile"
+                onPress={() => setShowConnectModal(true)}
+                borderActive={true}
+                elevationActive={false}
+                textStyle={styles.secondaryCtaText}
+                textContainerStyle={{ alignItems: "center" }}
+                style={styles.secondaryCta}
+              />
+
+              <View style={styles.trustRow}>
+                <CircleCheck size={16} color="rgba(31,45,61,0.55)" />
+                <AppText style={styles.trustText}>
+                  You can update patient details later from Profiles.
+                </AppText>
+              </View>
+            </View>
+          </>
+        )}
       </ScrollView>
 
       <MonthCalendarModal
@@ -577,6 +677,19 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 4,
   },
+  waitingCard: {
+    borderRadius: 24,
+    padding: 16,
+    gap: 12,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.92)",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
+  },
   profileRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -599,6 +712,28 @@ const styles = StyleSheet.create({
   },
   sectionHint: {
     marginTop: 2,
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.fontSize.sm,
+  },
+  waitingStatusPill: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: "rgba(74,144,226,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(74,144,226,0.24)",
+  },
+  waitingStatusText: {
+    color: theme.colors.brand.dark,
+    fontSize: theme.typography.fontSize.xs,
+  },
+  waitingBodyText: {
+    color: theme.colors.text.primary,
+    fontSize: theme.typography.fontSize.md,
+    lineHeight: 22,
+  },
+  waitingHintText: {
     color: theme.colors.text.secondary,
     fontSize: theme.typography.fontSize.sm,
   },

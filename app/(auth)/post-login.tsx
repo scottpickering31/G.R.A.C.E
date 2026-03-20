@@ -4,6 +4,7 @@ import {
 } from "@/src/api/onboarding/hooks";
 import AppText from "@/src/components/AppText";
 import PillButton from "@/src/components/buttons/PillButton";
+import DashboardSkeleton from "@/src/components/loading/DashboardSkeleton";
 import { useAuthStore } from "@/src/state/auth.store";
 import { theme } from "@/src/theme";
 import { useRouter } from "expo-router";
@@ -72,10 +73,6 @@ export default function PostLoginGate() {
     router,
   ]);
 
-  // if (!hydrated || onboardingLoading || patientLoading) {
-  //   return <DashboardSkeleton />;
-  // }
-
   if (onboardingError || patientError) {
     const message = onboardingErrorObj?.message ?? patientErrorObj?.message;
 
@@ -113,4 +110,6 @@ export default function PostLoginGate() {
   if (checksResolved) {
     return null;
   }
+
+  return <DashboardSkeleton />;
 }

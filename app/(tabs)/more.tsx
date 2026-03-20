@@ -132,7 +132,7 @@ function MoreRow({
       {comingSoon ? (
         <View style={styles.comingSoonPill}>
           <AppText weight="bold" style={styles.comingSoonPillText}>
-            Soon
+            Coming Soon
           </AppText>
         </View>
       ) : (
