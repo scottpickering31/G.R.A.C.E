@@ -1,11 +1,10 @@
 # G.R.A.C.E
 
 > A modern, user-friendly healthcare app designed to support better care, tracking, and decision-making.
->
-
-[![Screenshot-20260322-195849.png](https://i.postimg.cc/C1ZmJg78/Screenshot-20260322-195849.png)](https://postimg.cc/vgsrHCp8)
 
 ---
+
+[![Screenshot-20260322-195849.png](https://i.postimg.cc/C1ZmJg78/Screenshot-20260322-195849.png)](https://postimg.cc/vgsrHCp8)
 
 ## 🚀 Overview
 
