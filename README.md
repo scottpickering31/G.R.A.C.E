@@ -2,7 +2,7 @@
 
 > A modern, user-friendly healthcare app designed to support better care, tracking, and decision-making.
 >
-> ![App Screenshot](https://postimg.cc/vgsrHCp8)
+> ![App Screenshot](https://i.postimg.cc/C1ZmJg78/Screenshot-20260322-195849.png)
 
 ---
 
