@@ -6,7 +6,7 @@
 
 ## 🚀 Overview
 
-G.R.A.C.E is a mobile application built to simplify healthcare tracking and improve user outcomes through intuitive design and smart data handling.
+G.R.A.C.E is a mobile application built to simplify healthcare tracking for patient medications, stock levels and appointments. The aim is to improve user outcomes through intuitive design and smart data handling.
 
 This project focuses on creating a seamless experience for users while maintaining a scalable and robust architecture for future healthcare solutions.
 
