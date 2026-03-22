@@ -4,7 +4,9 @@
 
 ---
 
-[![Screenshot-20260322-195849.png](https://i.postimg.cc/C1ZmJg78/Screenshot-20260322-195849.png)](https://postimg.cc/vgsrHCp8)
+<p align="center">
+  <img src="https://i.postimg.cc/C1ZmJg78/Screenshot-20260322-195849.png" width="300" />
+</p>
 
 ## 🚀 Overview
 
