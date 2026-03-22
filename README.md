@@ -3,11 +3,8 @@
 > A modern, user-friendly healthcare app designed to support better care, tracking, and decision-making.
 
 ---
-<p align="center">
-  <a href="https://postimg.cc/vgsrHCp8">
-    <img src="https://i.postimg.cc/C1ZmJg78/Screenshot-20260322-195849.png" alt="G.R.A.C.E screenshot" width="300" />
-  </a>
-</p>
+
+[![Screenshot-20260322-195849.png](https://i.postimg.cc/C1ZmJg78/Screenshot-20260322-195849.png)](https://postimg.cc/vgsrHCp8)
 
 ## 🚀 Overview
 
